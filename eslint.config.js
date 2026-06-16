@@ -13,6 +13,9 @@ export default tseslint.config(
 				...globals.browser,
 				...globals.node
 			}
+		},
+		rules: {
+			'svelte/no-navigation-without-resolve': 'off'
 		}
 	},
 	{

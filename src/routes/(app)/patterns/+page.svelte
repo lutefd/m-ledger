@@ -1,4 +1,57 @@
-<main class="mx-auto max-w-6xl px-6 py-8">
-	<h1 class="text-3xl font-semibold">Patterns</h1>
-	<p class="mt-3 text-muted">Recognition triggers land here next.</p>
+<script lang="ts">
+	import { enhance } from '$app/forms';
+	import { Plus } from '@lucide/svelte';
+
+	let { data, form } = $props();
+</script>
+
+<main class="mx-auto grid max-w-6xl gap-8 px-6 py-8 lg:grid-cols-[380px_1fr]">
+	<section>
+		<h1 class="text-3xl font-semibold">Patterns</h1>
+		<p class="mt-3 text-muted">
+			Name patterns and the trigger that should make them recognizable.
+		</p>
+		<form
+			method="POST"
+			use:enhance
+			class="mt-6 space-y-4 rounded-lg border border-line bg-white/60 p-5"
+		>
+			{#if form?.message}
+				<p class="text-sm text-muted">{form.message}</p>
+			{/if}
+			<input
+				name="name"
+				class="w-full rounded border border-line bg-white px-3 py-2"
+				placeholder="Sliding window"
+				required
+			/>
+			<textarea
+				name="recognitionTrigger"
+				class="min-h-24 w-full rounded border border-line bg-white px-3 py-2"
+				placeholder="When should this pattern come to mind?"></textarea>
+			<button
+				class="inline-flex items-center gap-2 rounded bg-accent px-4 py-2 font-semibold text-white"
+				type="submit"
+			>
+				<Plus size={18} aria-hidden="true" />
+				Add pattern
+			</button>
+		</form>
+	</section>
+	<section class="space-y-3">
+		{#if data.patterns.length === 0}
+			<div class="rounded-lg border border-line bg-white/55 p-6 text-muted">
+				No patterns yet.
+			</div>
+		{:else}
+			{#each data.patterns as pattern (pattern.id)}
+				<article class="rounded-lg border border-line bg-white/60 p-5">
+					<h2 class="text-xl font-semibold">{pattern.name}</h2>
+					{#if pattern.recognitionTrigger}
+						<p class="mt-3 text-muted">{pattern.recognitionTrigger}</p>
+					{/if}
+				</article>
+			{/each}
+		{/if}
+	</section>
 </main>
