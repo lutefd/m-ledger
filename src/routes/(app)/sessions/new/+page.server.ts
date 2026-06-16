@@ -15,15 +15,15 @@ export const actions: Actions = {
 		const problemIds = (await request.formData())
 			.getAll('problemIds')
 			.map(String);
+		let sessionId: string;
 		try {
-			const sessionId = await createStudySession(db, user.id, problemIds);
-			throw redirect(303, `/sessions/${sessionId}`);
+			sessionId = await createStudySession(db, user.id, problemIds);
 		} catch (error) {
-			if (error instanceof Response) throw error;
 			return fail(400, {
 				message:
 					error instanceof Error ? error.message : 'Could not create session.'
 			});
 		}
+		throw redirect(303, `/sessions/${sessionId}`);
 	}
 };
