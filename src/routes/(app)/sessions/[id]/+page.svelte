@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { ExternalLink, Pause, Play } from '@lucide/svelte';
+	import { ExternalLink, Pause, Play, Save, Trash2 } from '@lucide/svelte';
 	import { formatDuration } from '$lib/utils/time';
 
 	let { data, form } = $props();
+	const notebookPlaceholder =
+		'## Session log\n\n- Approach:\n- Mistakes:\n- Next guardrail:';
 	const openSegment = $derived(
 		data.segments.find((segment) => !segment.endedAt)
 	);
@@ -19,6 +21,16 @@
 		}, 1000);
 		return () => window.clearInterval(interval);
 	});
+
+	function confirmDelete(event: SubmitEvent) {
+		if (
+			!window.confirm(
+				'Delete this session and all related attempts, timer segments, and briefing snapshots?'
+			)
+		) {
+			event.preventDefault();
+		}
+	}
 </script>
 
 <main class="mx-auto max-w-6xl space-y-6 px-6 py-8">
@@ -35,7 +47,7 @@
 	</div>
 	{#if form?.message}
 		<p
-			class="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+			class={`rounded border px-3 py-2 text-sm ${form.ok ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-700'}`}
 		>
 			{form.message}
 		</p>
@@ -135,4 +147,36 @@
 			</form>
 		</div>
 	{/if}
+
+	<section class="rounded-lg border border-line bg-white/60 p-5">
+		<div class="flex flex-wrap items-start justify-between gap-3">
+			<div>
+				<h2 class="text-xl font-semibold">Notebook</h2>
+				<p class="mt-1 text-sm text-muted">Markdown notes for this session.</p>
+			</div>
+			<form method="POST" action="?/delete" onsubmit={confirmDelete}>
+				<button
+					class="inline-flex items-center gap-2 rounded border border-red-200 px-3 py-2 text-sm font-semibold text-red-700"
+					type="submit"
+				>
+					<Trash2 size={16} aria-hidden="true" />
+					Delete
+				</button>
+			</form>
+		</div>
+		<form method="POST" action="?/notes" use:enhance class="mt-4 space-y-3">
+			<textarea
+				name="notes"
+				class="min-h-56 w-full rounded border border-line bg-white px-3 py-2 font-mono text-sm leading-6"
+				placeholder={notebookPlaceholder}>{data.session.notes ?? ''}</textarea
+			>
+			<button
+				class="inline-flex items-center gap-2 rounded bg-accent px-4 py-2 font-semibold text-white"
+				type="submit"
+			>
+				<Save size={16} aria-hidden="true" />
+				Save notebook
+			</button>
+		</form>
+	</section>
 </main>

@@ -5,8 +5,10 @@ import { requireUser } from '$lib/server/guards';
 import {
 	acknowledgeBriefing,
 	activateProblem,
+	deleteStudySession,
 	getSessionDetail,
-	pauseSession
+	pauseSession,
+	updateSessionNotes
 } from '$lib/server/services/sessions';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
@@ -36,6 +38,15 @@ export const actions: Actions = {
 	pause: async ({ locals, params }) => {
 		await pauseSession(db, requireUser(locals).id, params.id!);
 		return { ok: true };
+	},
+	notes: async ({ request, locals, params }) => {
+		const notes = String((await request.formData()).get('notes') ?? '');
+		await updateSessionNotes(db, requireUser(locals).id, params.id!, notes);
+		return { ok: true, message: 'Notebook saved.' };
+	},
+	delete: async ({ locals, params }) => {
+		await deleteStudySession(db, requireUser(locals).id, params.id!);
+		throw redirect(303, '/history');
 	},
 	complete: async ({ locals, params }) => {
 		await pauseSession(db, requireUser(locals).id, params.id!);

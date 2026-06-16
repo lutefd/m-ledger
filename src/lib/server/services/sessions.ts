@@ -317,6 +317,32 @@ export async function pauseSession(db: Db, userId: string, sessionId: string) {
 	});
 }
 
+export async function updateSessionNotes(
+	db: Db,
+	userId: string,
+	sessionId: string,
+	notes: string
+) {
+	await db
+		.update(studySessions)
+		.set({ notes: notes.trim() || null })
+		.where(
+			and(eq(studySessions.userId, userId), eq(studySessions.id, sessionId))
+		);
+}
+
+export async function deleteStudySession(
+	db: Db,
+	userId: string,
+	sessionId: string
+) {
+	await db
+		.delete(studySessions)
+		.where(
+			and(eq(studySessions.userId, userId), eq(studySessions.id, sessionId))
+		);
+}
+
 export async function completeSession(
 	db: Db,
 	userId: string,
