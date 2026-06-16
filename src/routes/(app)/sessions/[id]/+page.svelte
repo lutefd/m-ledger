@@ -31,6 +31,20 @@
 			event.preventDefault();
 		}
 	}
+
+	function elapsedForAttempt(attemptId: string | null, tick: number) {
+		void tick;
+		if (!attemptId) return 0;
+		return data.segments
+			.filter((segment) => segment.attemptId === attemptId)
+			.reduce((total, segment) => {
+				const end = segment.endedAt ? new Date(segment.endedAt) : new Date();
+				return (
+					total +
+					Math.max(0, end.getTime() - new Date(segment.startedAt).getTime())
+				);
+			}, 0);
+	}
 </script>
 
 <main class="mx-auto max-w-6xl space-y-6 px-6 py-8">
@@ -103,7 +117,14 @@
 					>
 						<div>
 							<h3 class="font-semibold">{item.title}</h3>
-							<p class="text-sm text-muted">{item.outcome ?? 'Not recapped'}</p>
+							<p class="text-sm text-muted">
+								{item.outcome ?? 'Not recapped'}
+								{#if item.attemptId}
+									· {formatDuration(
+										elapsedForAttempt(item.attemptId, renderedElapsed)
+									)}
+								{/if}
+							</p>
 						</div>
 						<div class="flex gap-2">
 							<a

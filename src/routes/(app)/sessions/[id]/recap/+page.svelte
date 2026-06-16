@@ -3,6 +3,25 @@
 
 	let { data, form } = $props();
 	const attempts = $derived(data.queue.filter((item) => item.attemptId));
+	const redoIntervals: Record<string, number> = {
+		'1': 1,
+		'2': 3,
+		'3': 7,
+		'4': 14,
+		'5': 30
+	};
+
+	function suggestRedoDate(event: Event, attemptId: string) {
+		const confidence = (event.currentTarget as HTMLSelectElement).value;
+		const days = redoIntervals[confidence];
+		const input = document.getElementById(
+			`redoDate:${attemptId}`
+		) as HTMLInputElement | null;
+		if (!days || !input || input.value) return;
+
+		const date = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+		input.value = date.toISOString().slice(0, 10);
+	}
 </script>
 
 <main class="mx-auto max-w-5xl px-6 py-8">
@@ -25,9 +44,11 @@
 			</div>
 		{:else}
 			{#each attempts as attempt (attempt.attemptId)}
-				<section class="rounded-lg border border-line bg-white/60 p-5">
+				<details class="rounded-lg border border-line bg-white/60 p-5" open>
+					<summary class="cursor-pointer text-xl font-semibold">
+						{attempt.title}
+					</summary>
 					<input type="hidden" name="attemptId" value={attempt.attemptId} />
-					<h2 class="text-xl font-semibold">{attempt.title}</h2>
 					<div class="mt-4 grid gap-4 md:grid-cols-2">
 						<label class="block space-y-2">
 							<span class="text-sm font-medium">Outcome</span>
@@ -51,6 +72,9 @@
 								name={`confidence:${attempt.attemptId}`}
 								class="w-full rounded border border-line bg-white px-3 py-2"
 								required
+								onchange={(event) =>
+									attempt.attemptId &&
+									suggestRedoDate(event, attempt.attemptId)}
 							>
 								<option value="">Choose</option>
 								{#each [1, 2, 3, 4, 5] as value (value)}
@@ -62,6 +86,7 @@
 					<label class="mt-4 block space-y-2">
 						<span class="text-sm font-medium">Redo date</span>
 						<input
+							id={`redoDate:${attempt.attemptId}`}
 							name={`redoDate:${attempt.attemptId}`}
 							type="date"
 							class="w-full rounded border border-line bg-white px-3 py-2"
@@ -100,7 +125,7 @@
 							{/each}
 						</fieldset>
 					</div>
-				</section>
+				</details>
 			{/each}
 			<button
 				class="rounded bg-accent px-4 py-2 font-semibold text-white"
