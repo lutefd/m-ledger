@@ -1,6 +1,4 @@
-import { building } from '$app/environment';
 import { redirect, type Handle } from '@sveltejs/kit';
-import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { auth } from '$lib/server/auth';
 
 const publicPaths = ['/login', '/setup', '/api/health'];
@@ -10,13 +8,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return new Response('Not found', { status: 404 });
 	}
 
-	const authResponse = await svelteKitHandler({
-		auth,
-		event,
-		resolve,
-		building
-	});
-	if (event.url.pathname.startsWith('/api/auth/')) return authResponse;
+	if (event.url.pathname.startsWith('/api/auth/')) {
+		return auth.handler(event.request);
+	}
 
 	const session = await auth.api.getSession({
 		headers: event.request.headers
@@ -39,5 +33,5 @@ export const handle: Handle = async ({ event, resolve }) => {
 		throw redirect(303, '/today');
 	}
 
-	return authResponse;
+	return resolve(event);
 };
