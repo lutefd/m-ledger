@@ -111,12 +111,17 @@ export async function generateBriefing(
 	const createdAt = isoNow(now);
 	const briefingId = crypto.randomUUID();
 
-	await db.transaction(async (tx) => {
-		await tx
-			.insert(briefings)
-			.values({ id: briefingId, userId, sessionId, createdAt });
+	db.transaction((tx) => {
+		tx.insert(briefings)
+			.values({
+				id: briefingId,
+				userId,
+				sessionId,
+				createdAt
+			})
+			.run();
 
-		const rows = await tx
+		const rows = tx
 			.select({
 				mistakeId: mistakes.id,
 				name: mistakes.name,
@@ -127,7 +132,8 @@ export async function generateBriefing(
 			.from(mistakes)
 			.innerJoin(attemptMistakes, eq(attemptMistakes.mistakeId, mistakes.id))
 			.innerJoin(attempts, eq(attempts.id, attemptMistakes.attemptId))
-			.where(eq(mistakes.userId, userId));
+			.where(eq(mistakes.userId, userId))
+			.all();
 
 		const grouped = new Map<string, MistakeCandidate>();
 		for (const row of rows) {
@@ -147,8 +153,7 @@ export async function generateBriefing(
 
 		const ranked = rankMistakeCandidates([...grouped.values()], now);
 		if (ranked.length > 0) {
-			await tx
-				.insert(briefingMistakes)
+			tx.insert(briefingMistakes)
 				.values(
 					ranked.map((mistake, index) => ({
 						briefingId,
@@ -160,10 +165,11 @@ export async function generateBriefing(
 						averageConfidence: Math.round(mistake.averageConfidence * 100)
 					}))
 				)
-				.onConflictDoNothing();
+				.onConflictDoNothing()
+				.run();
 		}
 
-		const redoRows = await tx
+		const redoRows = tx
 			.select({
 				attemptId: attempts.id,
 				problemId: attempts.problemId,
@@ -174,7 +180,8 @@ export async function generateBriefing(
 			.where(
 				sql`${attempts.userId} = ${userId} and ${attempts.redoDate} is not null and ${attempts.redoDate} <= ${dateOnly(now)} and ${attempts.completedAt} is not null`
 			)
-			.orderBy(desc(attempts.completedAt));
+			.orderBy(desc(attempts.completedAt))
+			.all();
 
 		const latestByProblem = new Map<string, (typeof redoRows)[number]>();
 		for (const row of redoRows) {
@@ -188,8 +195,7 @@ export async function generateBriefing(
 				(b.completedAt ?? '').localeCompare(a.completedAt ?? '')
 		);
 		if (redos.length > 0) {
-			await tx
-				.insert(briefingRedos)
+			tx.insert(briefingRedos)
 				.values(
 					redos.map((redo, index) => ({
 						briefingId,
@@ -199,7 +205,8 @@ export async function generateBriefing(
 						rank: index + 1
 					}))
 				)
-				.onConflictDoNothing();
+				.onConflictDoNothing()
+				.run();
 		}
 	});
 

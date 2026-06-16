@@ -41,20 +41,24 @@ export async function createStudySession(
 
 	const sessionId = crypto.randomUUID();
 	const now = isoNow();
-	await db.transaction(async (tx) => {
-		await tx.insert(studySessions).values({
-			id: sessionId,
-			userId,
-			status: 'briefing',
-			startedAt: now
-		});
-		await tx.insert(sessionQueue).values(
-			problemIds.map((problemId, index) => ({
-				sessionId,
-				problemId,
-				position: index + 1
-			}))
-		);
+	db.transaction((tx) => {
+		tx.insert(studySessions)
+			.values({
+				id: sessionId,
+				userId,
+				status: 'briefing',
+				startedAt: now
+			})
+			.run();
+		tx.insert(sessionQueue)
+			.values(
+				problemIds.map((problemId, index) => ({
+					sessionId,
+					problemId,
+					position: index + 1
+				}))
+			)
+			.run();
 	});
 	await generateBriefing(db, userId, sessionId);
 	return sessionId;
@@ -178,23 +182,25 @@ export async function acknowledgeBriefing(
 	sessionId: string
 ) {
 	const now = isoNow();
-	await db.transaction(async (tx) => {
-		const session = await tx.query.studySessions.findFirst({
-			where: and(
-				eq(studySessions.userId, userId),
-				eq(studySessions.id, sessionId)
-			)
-		});
+	db.transaction((tx) => {
+		const session = tx.query.studySessions
+			.findFirst({
+				where: and(
+					eq(studySessions.userId, userId),
+					eq(studySessions.id, sessionId)
+				)
+			})
+			.sync();
 		if (!session || session.status !== 'briefing')
 			throw new Error('Session is not waiting on a briefing.');
-		await tx
-			.update(briefings)
+		tx.update(briefings)
 			.set({ acknowledgedAt: now })
-			.where(eq(briefings.sessionId, sessionId));
-		await tx
-			.update(studySessions)
+			.where(eq(briefings.sessionId, sessionId))
+			.run();
+		tx.update(studySessions)
 			.set({ status: 'paused' })
-			.where(eq(studySessions.id, sessionId));
+			.where(eq(studySessions.id, sessionId))
+			.run();
 	});
 }
 
@@ -205,13 +211,15 @@ export async function activateProblem(
 	problemId: string
 ) {
 	const now = isoNow();
-	await db.transaction(async (tx) => {
-		const session = await tx.query.studySessions.findFirst({
-			where: and(
-				eq(studySessions.userId, userId),
-				eq(studySessions.id, sessionId)
-			)
-		});
+	db.transaction((tx) => {
+		const session = tx.query.studySessions
+			.findFirst({
+				where: and(
+					eq(studySessions.userId, userId),
+					eq(studySessions.id, sessionId)
+				)
+			})
+			.sync();
 		if (
 			!session ||
 			session.status === 'completed' ||
@@ -219,81 +227,93 @@ export async function activateProblem(
 		) {
 			throw new Error('Session cannot be changed right now.');
 		}
-		const queued = await tx.query.sessionQueue.findFirst({
-			where: and(
-				eq(sessionQueue.sessionId, sessionId),
-				eq(sessionQueue.problemId, problemId)
-			)
-		});
+		const queued = tx.query.sessionQueue
+			.findFirst({
+				where: and(
+					eq(sessionQueue.sessionId, sessionId),
+					eq(sessionQueue.problemId, problemId)
+				)
+			})
+			.sync();
 		if (!queued) throw new Error('Problem is not in this session.');
 
-		let attempt = await tx.query.attempts.findFirst({
-			where: and(
-				eq(attempts.sessionId, sessionId),
-				eq(attempts.problemId, problemId)
-			)
-		});
+		let attempt = tx.query.attempts
+			.findFirst({
+				where: and(
+					eq(attempts.sessionId, sessionId),
+					eq(attempts.problemId, problemId)
+				)
+			})
+			.sync();
 		if (!attempt) {
 			const attemptId = crypto.randomUUID();
-			await tx.insert(attempts).values({
-				id: attemptId,
-				userId,
-				sessionId,
-				problemId,
-				createdAt: now
-			});
-			attempt = (await tx.query.attempts.findFirst({
-				where: eq(attempts.id, attemptId)
-			}))!;
+			tx.insert(attempts)
+				.values({
+					id: attemptId,
+					userId,
+					sessionId,
+					problemId,
+					createdAt: now
+				})
+				.run();
+			attempt = tx.query.attempts
+				.findFirst({
+					where: eq(attempts.id, attemptId)
+				})
+				.sync()!;
 		}
 
-		await tx
-			.update(timerSegments)
+		tx.update(timerSegments)
 			.set({ endedAt: now })
 			.where(
 				and(
 					eq(timerSegments.sessionId, sessionId),
 					isNull(timerSegments.endedAt)
 				)
-			);
-		await tx.insert(timerSegments).values({
-			id: crypto.randomUUID(),
-			userId,
-			sessionId,
-			attemptId: attempt.id,
-			startedAt: now
-		});
-		await tx
-			.update(studySessions)
+			)
+			.run();
+		tx.insert(timerSegments)
+			.values({
+				id: crypto.randomUUID(),
+				userId,
+				sessionId,
+				attemptId: attempt.id,
+				startedAt: now
+			})
+			.run();
+		tx.update(studySessions)
 			.set({ status: 'active' })
-			.where(eq(studySessions.id, sessionId));
+			.where(eq(studySessions.id, sessionId))
+			.run();
 	});
 }
 
 export async function pauseSession(db: Db, userId: string, sessionId: string) {
 	const now = isoNow();
-	await db.transaction(async (tx) => {
-		const session = await tx.query.studySessions.findFirst({
-			where: and(
-				eq(studySessions.userId, userId),
-				eq(studySessions.id, sessionId)
-			)
-		});
+	db.transaction((tx) => {
+		const session = tx.query.studySessions
+			.findFirst({
+				where: and(
+					eq(studySessions.userId, userId),
+					eq(studySessions.id, sessionId)
+				)
+			})
+			.sync();
 		if (!session || session.status === 'completed')
 			throw new Error('Session cannot be paused.');
-		await tx
-			.update(timerSegments)
+		tx.update(timerSegments)
 			.set({ endedAt: now })
 			.where(
 				and(
 					eq(timerSegments.sessionId, sessionId),
 					isNull(timerSegments.endedAt)
 				)
-			);
-		await tx
-			.update(studySessions)
+			)
+			.run();
+		tx.update(studySessions)
 			.set({ status: 'paused' })
-			.where(eq(studySessions.id, sessionId));
+			.where(eq(studySessions.id, sessionId))
+			.run();
 	});
 }
 
@@ -303,28 +323,30 @@ export async function completeSession(
 	sessionId: string
 ) {
 	const now = isoNow();
-	await db.transaction(async (tx) => {
-		const session = await tx.query.studySessions.findFirst({
-			where: and(
-				eq(studySessions.userId, userId),
-				eq(studySessions.id, sessionId)
-			)
-		});
+	db.transaction((tx) => {
+		const session = tx.query.studySessions
+			.findFirst({
+				where: and(
+					eq(studySessions.userId, userId),
+					eq(studySessions.id, sessionId)
+				)
+			})
+			.sync();
 		if (!session || session.status === 'completed')
 			throw new Error('Session cannot be completed.');
-		await tx
-			.update(timerSegments)
+		tx.update(timerSegments)
 			.set({ endedAt: now })
 			.where(
 				and(
 					eq(timerSegments.sessionId, sessionId),
 					isNull(timerSegments.endedAt)
 				)
-			);
-		await tx
-			.update(studySessions)
+			)
+			.run();
+		tx.update(studySessions)
 			.set({ status: 'completed', finishedAt: now })
-			.where(eq(studySessions.id, sessionId));
+			.where(eq(studySessions.id, sessionId))
+			.run();
 	});
 }
 
@@ -335,27 +357,30 @@ export async function saveRecap(
 	inputs: RecapAttemptInput[]
 ) {
 	const now = isoNow();
-	await db.transaction(async (tx) => {
-		const session = await tx.query.studySessions.findFirst({
-			where: and(
-				eq(studySessions.userId, userId),
-				eq(studySessions.id, sessionId)
-			)
-		});
+	db.transaction((tx) => {
+		const session = tx.query.studySessions
+			.findFirst({
+				where: and(
+					eq(studySessions.userId, userId),
+					eq(studySessions.id, sessionId)
+				)
+			})
+			.sync();
 		if (!session || session.status === 'completed')
 			throw new Error('Session cannot be recapped.');
 
 		for (const input of inputs) {
-			const attempt = await tx.query.attempts.findFirst({
-				where: and(
-					eq(attempts.userId, userId),
-					eq(attempts.sessionId, sessionId),
-					eq(attempts.id, input.attemptId)
-				)
-			});
+			const attempt = tx.query.attempts
+				.findFirst({
+					where: and(
+						eq(attempts.userId, userId),
+						eq(attempts.sessionId, sessionId),
+						eq(attempts.id, input.attemptId)
+					)
+				})
+				.sync();
 			if (!attempt) throw new Error('Attempt not found.');
-			await tx
-				.update(attempts)
+			tx.update(attempts)
 				.set({
 					outcome: input.outcome,
 					confidence: input.confidence,
@@ -363,44 +388,49 @@ export async function saveRecap(
 					redoDate: input.redoDate || null,
 					completedAt: now
 				})
-				.where(eq(attempts.id, input.attemptId));
-			await tx
-				.delete(attemptMistakes)
-				.where(eq(attemptMistakes.attemptId, input.attemptId));
-			await tx
-				.delete(attemptPatterns)
-				.where(eq(attemptPatterns.attemptId, input.attemptId));
+				.where(eq(attempts.id, input.attemptId))
+				.run();
+			tx.delete(attemptMistakes)
+				.where(eq(attemptMistakes.attemptId, input.attemptId))
+				.run();
+			tx.delete(attemptPatterns)
+				.where(eq(attemptPatterns.attemptId, input.attemptId))
+				.run();
 			if (input.mistakeIds.length) {
-				await tx.insert(attemptMistakes).values(
-					input.mistakeIds.map((mistakeId) => ({
-						attemptId: input.attemptId,
-						mistakeId
-					}))
-				);
+				tx.insert(attemptMistakes)
+					.values(
+						input.mistakeIds.map((mistakeId) => ({
+							attemptId: input.attemptId,
+							mistakeId
+						}))
+					)
+					.run();
 			}
 			if (input.patternIds.length) {
-				await tx.insert(attemptPatterns).values(
-					input.patternIds.map((patternId) => ({
-						attemptId: input.attemptId,
-						patternId
-					}))
-				);
+				tx.insert(attemptPatterns)
+					.values(
+						input.patternIds.map((patternId) => ({
+							attemptId: input.attemptId,
+							patternId
+						}))
+					)
+					.run();
 			}
 		}
 
-		await tx
-			.update(timerSegments)
+		tx.update(timerSegments)
 			.set({ endedAt: now })
 			.where(
 				and(
 					eq(timerSegments.sessionId, sessionId),
 					isNull(timerSegments.endedAt)
 				)
-			);
-		await tx
-			.update(studySessions)
+			)
+			.run();
+		tx.update(studySessions)
 			.set({ status: 'completed', finishedAt: now })
-			.where(eq(studySessions.id, sessionId));
+			.where(eq(studySessions.id, sessionId))
+			.run();
 	});
 }
 

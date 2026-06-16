@@ -57,32 +57,34 @@ export async function createProblem(
 		updatedAt: now
 	};
 
-	await db.transaction(async (tx) => {
-		await tx.insert(problems).values(problem);
+	db.transaction((tx) => {
+		tx.insert(problems).values(problem).run();
 		for (const name of input.topicNames ?? []) {
 			const normalizedName = normalizeName(name);
 			if (!normalizedName) continue;
 			const topicId = crypto.randomUUID();
-			await tx
-				.insert(topics)
+			tx.insert(topics)
 				.values({
 					id: topicId,
 					userId: input.userId,
 					name: name.trim(),
 					normalizedName
 				})
-				.onConflictDoNothing();
-			const topic = await tx.query.topics.findFirst({
-				where: and(
-					eq(topics.userId, input.userId),
-					eq(topics.normalizedName, normalizedName)
-				)
-			});
+				.onConflictDoNothing()
+				.run();
+			const topic = tx.query.topics
+				.findFirst({
+					where: and(
+						eq(topics.userId, input.userId),
+						eq(topics.normalizedName, normalizedName)
+					)
+				})
+				.sync();
 			if (topic) {
-				await tx
-					.insert(problemTopics)
+				tx.insert(problemTopics)
 					.values({ problemId: id, topicId: topic.id })
-					.onConflictDoNothing();
+					.onConflictDoNothing()
+					.run();
 			}
 		}
 	});

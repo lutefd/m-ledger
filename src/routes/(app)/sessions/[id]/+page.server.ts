@@ -1,6 +1,7 @@
 import { fail, redirect, type Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db/client';
+import { requireUser } from '$lib/server/guards';
 import {
 	acknowledgeBriefing,
 	activateProblem,
@@ -9,20 +10,21 @@ import {
 } from '$lib/server/services/sessions';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
-	const detail = await getSessionDetail(db, locals.user!.id, params.id);
+	const detail = await getSessionDetail(db, requireUser(locals).id, params.id);
 	if (!detail) throw redirect(303, '/history');
 	return detail;
 };
 
 export const actions: Actions = {
 	acknowledge: async ({ locals, params }) => {
-		await acknowledgeBriefing(db, locals.user!.id, params.id!);
+		await acknowledgeBriefing(db, requireUser(locals).id, params.id!);
 		return { ok: true };
 	},
 	activate: async ({ request, locals, params }) => {
+		const user = requireUser(locals);
 		const problemId = String((await request.formData()).get('problemId') ?? '');
 		try {
-			await activateProblem(db, locals.user!.id, params.id!, problemId);
+			await activateProblem(db, user.id, params.id!, problemId);
 		} catch (error) {
 			return fail(400, {
 				message:
@@ -32,11 +34,11 @@ export const actions: Actions = {
 		return { ok: true };
 	},
 	pause: async ({ locals, params }) => {
-		await pauseSession(db, locals.user!.id, params.id!);
+		await pauseSession(db, requireUser(locals).id, params.id!);
 		return { ok: true };
 	},
 	complete: async ({ locals, params }) => {
-		await pauseSession(db, locals.user!.id, params.id!);
+		await pauseSession(db, requireUser(locals).id, params.id!);
 		throw redirect(303, `/sessions/${params.id}/recap`);
 	}
 };

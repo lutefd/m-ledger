@@ -1,6 +1,7 @@
 import { fail, redirect, type Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db/client';
+import { requireUser } from '$lib/server/guards';
 import { listMistakes, listPatterns } from '$lib/server/services/catalog';
 import {
 	getSessionDetail,
@@ -9,17 +10,19 @@ import {
 } from '$lib/server/services/sessions';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
-	const detail = await getSessionDetail(db, locals.user!.id, params.id);
+	const user = requireUser(locals);
+	const detail = await getSessionDetail(db, user.id, params.id);
 	if (!detail) throw redirect(303, '/history');
 	return {
 		...detail,
-		mistakes: await listMistakes(db, locals.user!.id),
-		patterns: await listPatterns(db, locals.user!.id)
+		mistakes: await listMistakes(db, user.id),
+		patterns: await listPatterns(db, user.id)
 	};
 };
 
 export const actions: Actions = {
 	default: async ({ request, locals, params }) => {
+		const user = requireUser(locals);
 		const form = await request.formData();
 		const attemptIds = form.getAll('attemptId').map(String);
 		const inputs: RecapAttemptInput[] = attemptIds.map((attemptId) => ({
@@ -45,7 +48,7 @@ export const actions: Actions = {
 		}
 
 		try {
-			await saveRecap(db, locals.user!.id, params.id!, inputs);
+			await saveRecap(db, user.id, params.id!, inputs);
 		} catch (error) {
 			return fail(400, {
 				message:
