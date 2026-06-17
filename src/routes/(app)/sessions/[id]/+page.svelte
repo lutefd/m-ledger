@@ -15,6 +15,9 @@
 	);
 	let saveState = $state<'saved' | 'saving' | 'error'>('saved');
 	let saveTimer: number | undefined;
+	let saveInFlight: Promise<void> | null = null;
+	let notebookDirty = false;
+	let resubmittingAfterSave = false;
 	let showMistakeForm = $state(false);
 	let showPatternForm = $state(false);
 
@@ -27,6 +30,19 @@
 			renderedElapsed = base + Math.max(0, Date.now() - startedAt);
 		}, 1000);
 		return () => window.clearInterval(interval);
+	});
+
+	$effect(() => {
+		const flushOnUnload = () => {
+			if (!notebookDirty) return;
+			window.clearTimeout(saveTimer);
+			const body = new FormData();
+			body.set('document', notebook ? JSON.stringify(notebook) : '');
+			navigator.sendBeacon('?/notebook', body);
+			notebookDirty = false;
+		};
+		window.addEventListener('beforeunload', flushOnUnload);
+		return () => window.removeEventListener('beforeunload', flushOnUnload);
 	});
 
 	function confirmDelete(event: SubmitEvent) {
@@ -55,16 +71,56 @@
 
 	function scheduleNotebookSave(document: RichTextDocument | null) {
 		notebook = document;
+		notebookDirty = true;
 		saveState = 'saving';
 		window.clearTimeout(saveTimer);
 		saveTimer = window.setTimeout(saveNotebook, 750);
 	}
 
-	async function saveNotebook() {
+	async function saveNotebook(): Promise<void> {
+		window.clearTimeout(saveTimer);
+		saveTimer = undefined;
+		if (saveInFlight) {
+			await saveInFlight;
+			if (notebookDirty) return saveNotebook();
+			return;
+		}
+		if (!notebookDirty) return;
+		notebookDirty = false;
 		const body = new FormData();
 		body.set('document', notebook ? JSON.stringify(notebook) : '');
-		const response = await fetch('?/notebook', { method: 'POST', body });
-		saveState = response.ok ? 'saved' : 'error';
+		saveInFlight = fetch('?/notebook', { method: 'POST', body })
+			.then((response) => {
+				saveState = response.ok ? 'saved' : 'error';
+				if (!response.ok) notebookDirty = true;
+			})
+			.catch(() => {
+				saveState = 'error';
+				notebookDirty = true;
+			})
+			.finally(() => {
+				saveInFlight = null;
+			});
+		await saveInFlight;
+		if (notebookDirty && saveState !== 'error') await saveNotebook();
+	}
+
+	async function flushNotebookBeforeSubmit(event: SubmitEvent) {
+		if (resubmittingAfterSave) {
+			resubmittingAfterSave = false;
+			return;
+		}
+		if (!notebookDirty && !saveInFlight && !saveTimer) return;
+		event.preventDefault();
+		await saveNotebook();
+		if (saveState === 'error') return;
+		resubmittingAfterSave = true;
+		const form = event.currentTarget as HTMLFormElement;
+		if (event.submitter instanceof HTMLElement) {
+			form.requestSubmit(event.submitter);
+		} else {
+			form.requestSubmit();
+		}
 	}
 </script>
 
@@ -188,7 +244,12 @@
 							>
 								<ExternalLink size={16} aria-hidden="true" />
 							</a>
-							<form method="POST" action="?/activate" use:enhance>
+							<form
+								method="POST"
+								action="?/activate"
+								use:enhance
+								onsubmit={flushNotebookBeforeSubmit}
+							>
 								<input type="hidden" name="problemId" value={item.problemId} />
 								<button
 									class="inline-flex items-center gap-2 rounded bg-accent px-3 py-2 text-sm font-semibold text-white"
@@ -207,14 +268,23 @@
 		</section>
 		<div class="flex flex-wrap items-center gap-3">
 			{#if data.session.status === 'active'}
-				<form method="POST" action="?/pause" use:enhance>
+				<form
+					method="POST"
+					action="?/pause"
+					use:enhance
+					onsubmit={flushNotebookBeforeSubmit}
+				>
 					<button
 						class="inline-flex items-center gap-2 rounded border border-line px-4 py-2"
 						type="submit"><Pause size={16} />Stop work</button
 					>
 				</form>
 			{/if}
-			<form method="POST" action="?/complete">
+			<form
+				method="POST"
+				action="?/complete"
+				onsubmit={flushNotebookBeforeSubmit}
+			>
 				<button
 					class="rounded bg-ink px-4 py-2 font-semibold text-white"
 					type="submit">Finish session / recap</button
