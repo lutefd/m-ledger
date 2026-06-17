@@ -195,7 +195,8 @@ export const studySessions = sqliteTable(
 		}).notNull(),
 		startedAt: iso('started_at').notNull(),
 		finishedAt: iso('finished_at'),
-		notes: text('notes')
+		notes: text('notes'),
+		notesDocument: text('notes_document')
 	},
 	(table) => [
 		index('study_sessions_user_started_idx').on(table.userId, table.startedAt),
@@ -241,6 +242,7 @@ export const attempts = sqliteTable(
 		}),
 		confidence: integer('confidence'),
 		notes: text('notes'),
+		notesDocument: text('notes_document'),
 		redoDate: text('redo_date'),
 		createdAt: iso('created_at').notNull(),
 		completedAt: iso('completed_at')

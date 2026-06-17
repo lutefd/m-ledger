@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { richTextDocumentSchema } from './rich-text';
 
 export const newSessionSchema = z.object({
 	problemIds: z.array(z.string()).min(1)
@@ -14,6 +15,7 @@ export const recapAttemptSchema = z.object({
 	]),
 	confidence: z.coerce.number().int().min(1).max(5),
 	notes: z.string().optional(),
+	notesDocument: richTextDocumentSchema('recap').optional(),
 	redoDate: z
 		.string()
 		.regex(/^\d{4}-\d{2}-\d{2}$/)

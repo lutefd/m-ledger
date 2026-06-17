@@ -1,0 +1,1447 @@
+{
+	"version": "6",
+	"dialect": "sqlite",
+	"id": "adaa13ac-a5b4-4ab1-bc3d-4fcf0a873b2d",
+	"prevId": "73e59629-b888-4dda-8f97-9204c5dbff2a",
+	"tables": {
+		"accounts": {
+			"name": "accounts",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"account_id": {
+					"name": "account_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"provider_id": {
+					"name": "provider_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"access_token": {
+					"name": "access_token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"refresh_token": {
+					"name": "refresh_token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"id_token": {
+					"name": "id_token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"access_token_expires_at": {
+					"name": "access_token_expires_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"refresh_token_expires_at": {
+					"name": "refresh_token_expires_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"scope": {
+					"name": "scope",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"password": {
+					"name": "password",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"accounts_user_id_idx": {
+					"name": "accounts_user_id_idx",
+					"columns": ["user_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"accounts_user_id_users_id_fk": {
+					"name": "accounts_user_id_users_id_fk",
+					"tableFrom": "accounts",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"attempt_mistakes": {
+			"name": "attempt_mistakes",
+			"columns": {
+				"attempt_id": {
+					"name": "attempt_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"mistake_id": {
+					"name": "mistake_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"occurrence_note": {
+					"name": "occurrence_note",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"attempt_mistakes_mistake_idx": {
+					"name": "attempt_mistakes_mistake_idx",
+					"columns": ["mistake_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"attempt_mistakes_attempt_id_attempts_id_fk": {
+					"name": "attempt_mistakes_attempt_id_attempts_id_fk",
+					"tableFrom": "attempt_mistakes",
+					"tableTo": "attempts",
+					"columnsFrom": ["attempt_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"attempt_mistakes_mistake_id_mistakes_id_fk": {
+					"name": "attempt_mistakes_mistake_id_mistakes_id_fk",
+					"tableFrom": "attempt_mistakes",
+					"tableTo": "mistakes",
+					"columnsFrom": ["mistake_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"attempt_mistakes_attempt_id_mistake_id_pk": {
+					"columns": ["attempt_id", "mistake_id"],
+					"name": "attempt_mistakes_attempt_id_mistake_id_pk"
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"attempt_patterns": {
+			"name": "attempt_patterns",
+			"columns": {
+				"attempt_id": {
+					"name": "attempt_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"pattern_id": {
+					"name": "pattern_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"trigger_note": {
+					"name": "trigger_note",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"attempt_patterns_pattern_idx": {
+					"name": "attempt_patterns_pattern_idx",
+					"columns": ["pattern_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"attempt_patterns_attempt_id_attempts_id_fk": {
+					"name": "attempt_patterns_attempt_id_attempts_id_fk",
+					"tableFrom": "attempt_patterns",
+					"tableTo": "attempts",
+					"columnsFrom": ["attempt_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"attempt_patterns_pattern_id_patterns_id_fk": {
+					"name": "attempt_patterns_pattern_id_patterns_id_fk",
+					"tableFrom": "attempt_patterns",
+					"tableTo": "patterns",
+					"columnsFrom": ["pattern_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"attempt_patterns_attempt_id_pattern_id_pk": {
+					"columns": ["attempt_id", "pattern_id"],
+					"name": "attempt_patterns_attempt_id_pattern_id_pk"
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"attempts": {
+			"name": "attempts",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"session_id": {
+					"name": "session_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"problem_id": {
+					"name": "problem_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"outcome": {
+					"name": "outcome",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"confidence": {
+					"name": "confidence",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"notes": {
+					"name": "notes",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"notes_document": {
+					"name": "notes_document",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"redo_date": {
+					"name": "redo_date",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"completed_at": {
+					"name": "completed_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"attempts_session_problem_unique": {
+					"name": "attempts_session_problem_unique",
+					"columns": ["session_id", "problem_id"],
+					"isUnique": true
+				},
+				"attempts_user_problem_completed_idx": {
+					"name": "attempts_user_problem_completed_idx",
+					"columns": ["user_id", "problem_id", "completed_at"],
+					"isUnique": false
+				},
+				"attempts_user_redo_idx": {
+					"name": "attempts_user_redo_idx",
+					"columns": ["user_id", "redo_date"],
+					"isUnique": false
+				},
+				"attempts_user_completed_idx": {
+					"name": "attempts_user_completed_idx",
+					"columns": ["user_id", "completed_at"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"attempts_user_id_users_id_fk": {
+					"name": "attempts_user_id_users_id_fk",
+					"tableFrom": "attempts",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"attempts_session_id_study_sessions_id_fk": {
+					"name": "attempts_session_id_study_sessions_id_fk",
+					"tableFrom": "attempts",
+					"tableTo": "study_sessions",
+					"columnsFrom": ["session_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"attempts_problem_id_problems_id_fk": {
+					"name": "attempts_problem_id_problems_id_fk",
+					"tableFrom": "attempts",
+					"tableTo": "problems",
+					"columnsFrom": ["problem_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"briefing_mistakes": {
+			"name": "briefing_mistakes",
+			"columns": {
+				"briefing_id": {
+					"name": "briefing_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"mistake_id": {
+					"name": "mistake_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"rank": {
+					"name": "rank",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"score": {
+					"name": "score",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"occurrence_count": {
+					"name": "occurrence_count",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"last_occurrence": {
+					"name": "last_occurrence",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"average_confidence": {
+					"name": "average_confidence",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"briefing_mistakes_rank_unique": {
+					"name": "briefing_mistakes_rank_unique",
+					"columns": ["briefing_id", "rank"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"briefing_mistakes_briefing_id_briefings_id_fk": {
+					"name": "briefing_mistakes_briefing_id_briefings_id_fk",
+					"tableFrom": "briefing_mistakes",
+					"tableTo": "briefings",
+					"columnsFrom": ["briefing_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"briefing_mistakes_mistake_id_mistakes_id_fk": {
+					"name": "briefing_mistakes_mistake_id_mistakes_id_fk",
+					"tableFrom": "briefing_mistakes",
+					"tableTo": "mistakes",
+					"columnsFrom": ["mistake_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"briefing_mistakes_briefing_id_mistake_id_pk": {
+					"columns": ["briefing_id", "mistake_id"],
+					"name": "briefing_mistakes_briefing_id_mistake_id_pk"
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"briefing_redos": {
+			"name": "briefing_redos",
+			"columns": {
+				"briefing_id": {
+					"name": "briefing_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"problem_id": {
+					"name": "problem_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"attempt_id": {
+					"name": "attempt_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"due_date": {
+					"name": "due_date",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"rank": {
+					"name": "rank",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"briefing_redos_rank_unique": {
+					"name": "briefing_redos_rank_unique",
+					"columns": ["briefing_id", "rank"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"briefing_redos_briefing_id_briefings_id_fk": {
+					"name": "briefing_redos_briefing_id_briefings_id_fk",
+					"tableFrom": "briefing_redos",
+					"tableTo": "briefings",
+					"columnsFrom": ["briefing_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"briefing_redos_problem_id_problems_id_fk": {
+					"name": "briefing_redos_problem_id_problems_id_fk",
+					"tableFrom": "briefing_redos",
+					"tableTo": "problems",
+					"columnsFrom": ["problem_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"briefing_redos_attempt_id_attempts_id_fk": {
+					"name": "briefing_redos_attempt_id_attempts_id_fk",
+					"tableFrom": "briefing_redos",
+					"tableTo": "attempts",
+					"columnsFrom": ["attempt_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"briefing_redos_briefing_id_problem_id_pk": {
+					"columns": ["briefing_id", "problem_id"],
+					"name": "briefing_redos_briefing_id_problem_id_pk"
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"briefings": {
+			"name": "briefings",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"session_id": {
+					"name": "session_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"acknowledged_at": {
+					"name": "acknowledged_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"briefings_session_unique": {
+					"name": "briefings_session_unique",
+					"columns": ["session_id"],
+					"isUnique": true
+				},
+				"briefings_user_created_idx": {
+					"name": "briefings_user_created_idx",
+					"columns": ["user_id", "created_at"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"briefings_user_id_users_id_fk": {
+					"name": "briefings_user_id_users_id_fk",
+					"tableFrom": "briefings",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"briefings_session_id_study_sessions_id_fk": {
+					"name": "briefings_session_id_study_sessions_id_fk",
+					"tableFrom": "briefings",
+					"tableTo": "study_sessions",
+					"columnsFrom": ["session_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"mistakes": {
+			"name": "mistakes",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"normalized_name": {
+					"name": "normalized_name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"description": {
+					"name": "description",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"guardrail": {
+					"name": "guardrail",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"archived": {
+					"name": "archived",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": false
+				}
+			},
+			"indexes": {
+				"mistakes_user_normalized_unique": {
+					"name": "mistakes_user_normalized_unique",
+					"columns": ["user_id", "normalized_name"],
+					"isUnique": true
+				},
+				"mistakes_user_archived_idx": {
+					"name": "mistakes_user_archived_idx",
+					"columns": ["user_id", "archived"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"mistakes_user_id_users_id_fk": {
+					"name": "mistakes_user_id_users_id_fk",
+					"tableFrom": "mistakes",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"patterns": {
+			"name": "patterns",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"normalized_name": {
+					"name": "normalized_name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"recognition_trigger": {
+					"name": "recognition_trigger",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"archived": {
+					"name": "archived",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": false
+				}
+			},
+			"indexes": {
+				"patterns_user_normalized_unique": {
+					"name": "patterns_user_normalized_unique",
+					"columns": ["user_id", "normalized_name"],
+					"isUnique": true
+				},
+				"patterns_user_archived_idx": {
+					"name": "patterns_user_archived_idx",
+					"columns": ["user_id", "archived"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"patterns_user_id_users_id_fk": {
+					"name": "patterns_user_id_users_id_fk",
+					"tableFrom": "patterns",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"problem_topics": {
+			"name": "problem_topics",
+			"columns": {
+				"problem_id": {
+					"name": "problem_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"topic_id": {
+					"name": "topic_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"problem_topics_topic_idx": {
+					"name": "problem_topics_topic_idx",
+					"columns": ["topic_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"problem_topics_problem_id_problems_id_fk": {
+					"name": "problem_topics_problem_id_problems_id_fk",
+					"tableFrom": "problem_topics",
+					"tableTo": "problems",
+					"columnsFrom": ["problem_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"problem_topics_topic_id_topics_id_fk": {
+					"name": "problem_topics_topic_id_topics_id_fk",
+					"tableFrom": "problem_topics",
+					"tableTo": "topics",
+					"columnsFrom": ["topic_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"problem_topics_problem_id_topic_id_pk": {
+					"columns": ["problem_id", "topic_id"],
+					"name": "problem_topics_problem_id_topic_id_pk"
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"problems": {
+			"name": "problems",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"url": {
+					"name": "url",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"slug": {
+					"name": "slug",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"title": {
+					"name": "title",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"difficulty": {
+					"name": "difficulty",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"problems_user_url_unique": {
+					"name": "problems_user_url_unique",
+					"columns": ["user_id", "url"],
+					"isUnique": true
+				},
+				"problems_user_slug_idx": {
+					"name": "problems_user_slug_idx",
+					"columns": ["user_id", "slug"],
+					"isUnique": false
+				},
+				"problems_user_created_idx": {
+					"name": "problems_user_created_idx",
+					"columns": ["user_id", "created_at"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"problems_user_id_users_id_fk": {
+					"name": "problems_user_id_users_id_fk",
+					"tableFrom": "problems",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"session_queue": {
+			"name": "session_queue",
+			"columns": {
+				"session_id": {
+					"name": "session_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"problem_id": {
+					"name": "problem_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"position": {
+					"name": "position",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"session_queue_position_unique": {
+					"name": "session_queue_position_unique",
+					"columns": ["session_id", "position"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"session_queue_session_id_study_sessions_id_fk": {
+					"name": "session_queue_session_id_study_sessions_id_fk",
+					"tableFrom": "session_queue",
+					"tableTo": "study_sessions",
+					"columnsFrom": ["session_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"session_queue_problem_id_problems_id_fk": {
+					"name": "session_queue_problem_id_problems_id_fk",
+					"tableFrom": "session_queue",
+					"tableTo": "problems",
+					"columnsFrom": ["problem_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"session_queue_session_id_problem_id_pk": {
+					"columns": ["session_id", "problem_id"],
+					"name": "session_queue_session_id_problem_id_pk"
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"sessions": {
+			"name": "sessions",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"expires_at": {
+					"name": "expires_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"token": {
+					"name": "token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"ip_address": {
+					"name": "ip_address",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"user_agent": {
+					"name": "user_agent",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"sessions_token_unique": {
+					"name": "sessions_token_unique",
+					"columns": ["token"],
+					"isUnique": true
+				},
+				"sessions_user_id_idx": {
+					"name": "sessions_user_id_idx",
+					"columns": ["user_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"sessions_user_id_users_id_fk": {
+					"name": "sessions_user_id_users_id_fk",
+					"tableFrom": "sessions",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"study_sessions": {
+			"name": "study_sessions",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"status": {
+					"name": "status",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"started_at": {
+					"name": "started_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"finished_at": {
+					"name": "finished_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"notes": {
+					"name": "notes",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"notes_document": {
+					"name": "notes_document",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"study_sessions_user_started_idx": {
+					"name": "study_sessions_user_started_idx",
+					"columns": ["user_id", "started_at"],
+					"isUnique": false
+				},
+				"study_sessions_user_status_idx": {
+					"name": "study_sessions_user_status_idx",
+					"columns": ["user_id", "status"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"study_sessions_user_id_users_id_fk": {
+					"name": "study_sessions_user_id_users_id_fk",
+					"tableFrom": "study_sessions",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"timer_segments": {
+			"name": "timer_segments",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"session_id": {
+					"name": "session_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"attempt_id": {
+					"name": "attempt_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"started_at": {
+					"name": "started_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"ended_at": {
+					"name": "ended_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"timer_segments_session_idx": {
+					"name": "timer_segments_session_idx",
+					"columns": ["session_id"],
+					"isUnique": false
+				},
+				"timer_segments_attempt_idx": {
+					"name": "timer_segments_attempt_idx",
+					"columns": ["attempt_id"],
+					"isUnique": false
+				},
+				"timer_segments_one_open_per_session": {
+					"name": "timer_segments_one_open_per_session",
+					"columns": ["session_id"],
+					"isUnique": true,
+					"where": "ended_at is null"
+				}
+			},
+			"foreignKeys": {
+				"timer_segments_user_id_users_id_fk": {
+					"name": "timer_segments_user_id_users_id_fk",
+					"tableFrom": "timer_segments",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"timer_segments_session_id_study_sessions_id_fk": {
+					"name": "timer_segments_session_id_study_sessions_id_fk",
+					"tableFrom": "timer_segments",
+					"tableTo": "study_sessions",
+					"columnsFrom": ["session_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"timer_segments_attempt_id_attempts_id_fk": {
+					"name": "timer_segments_attempt_id_attempts_id_fk",
+					"tableFrom": "timer_segments",
+					"tableTo": "attempts",
+					"columnsFrom": ["attempt_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"topics": {
+			"name": "topics",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"normalized_name": {
+					"name": "normalized_name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"topics_user_normalized_unique": {
+					"name": "topics_user_normalized_unique",
+					"columns": ["user_id", "normalized_name"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"topics_user_id_users_id_fk": {
+					"name": "topics_user_id_users_id_fk",
+					"tableFrom": "topics",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"users": {
+			"name": "users",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"email": {
+					"name": "email",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"email_verified": {
+					"name": "email_verified",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": false
+				},
+				"image": {
+					"name": "image",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))"
+				}
+			},
+			"indexes": {
+				"users_email_unique": {
+					"name": "users_email_unique",
+					"columns": ["email"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"verifications": {
+			"name": "verifications",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"identifier": {
+					"name": "identifier",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"value": {
+					"name": "value",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"expires_at": {
+					"name": "expires_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"verifications_identifier_idx": {
+					"name": "verifications_identifier_idx",
+					"columns": ["identifier"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		}
+	},
+	"views": {},
+	"enums": {},
+	"_meta": {
+		"schemas": {},
+		"tables": {},
+		"columns": {}
+	},
+	"internal": {
+		"indexes": {}
+	}
+}

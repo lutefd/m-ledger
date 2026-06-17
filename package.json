@@ -43,9 +43,14 @@
 		"vitest": "^4.1.9"
 	},
 	"dependencies": {
-		"@lucide/svelte": "^1.18.0",
+		"@lucide/svelte": "^1.20.0",
 		"@sveltejs/adapter-node": "^5.5.4",
 		"@tailwindcss/vite": "^4.3.1",
+		"@tiptap/core": "^3.26.1",
+		"@tiptap/extension-link": "^3.26.1",
+		"@tiptap/extension-list": "^3.26.1",
+		"@tiptap/pm": "^3.26.1",
+		"@tiptap/starter-kit": "^3.26.1",
 		"better-auth": "^1.6.19",
 		"better-sqlite3": "^12.11.1",
 		"drizzle-orm": "^0.45.2",
