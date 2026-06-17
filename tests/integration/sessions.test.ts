@@ -11,8 +11,13 @@ import {
 	activateProblem,
 	createStudySession,
 	pauseSession,
-	saveRecap
+	saveRecap,
+	updateSessionNotes
 } from '../../src/lib/server/services/sessions';
+import {
+	createMistake,
+	createPattern
+} from '../../src/lib/server/services/catalog';
 import {
 	generateBriefing,
 	getBriefingPreview
@@ -176,9 +181,64 @@ describe('session transitions', () => {
 			activateProblem(db, 'user-1', sessionId, 'two-sum')
 		).resolves.toBeUndefined();
 	});
+
+	it('rejects notebook saves for completed sessions', async () => {
+		seedUser('user-1');
+		seedProblem('two-sum', 'user-1');
+		db.insert(studySessions)
+			.values({
+				id: 'completed-session',
+				userId: 'user-1',
+				status: 'completed',
+				startedAt: '2026-06-01T00:00:00.000Z',
+				finishedAt: '2026-06-01T00:30:00.000Z'
+			})
+			.run();
+
+		await expect(
+			updateSessionNotes(db, 'user-1', 'completed-session', {
+				type: 'doc',
+				content: [{ type: 'paragraph', content: [{ type: 'text', text: 'x' }] }]
+			})
+		).rejects.toThrow('Session is not open.');
+	});
 });
 
 describe('recap validation', () => {
+	it('requires a paused session before saving recap', async () => {
+		seedUser('user-1');
+		seedProblem('two-sum', 'user-1');
+		const sessionId = await createStudySession(db, 'user-1', ['two-sum']);
+		await acknowledgeBriefing(db, 'user-1', sessionId);
+		await activateProblem(db, 'user-1', sessionId, 'two-sum');
+		const attempt = db.select().from(attempts).get()!;
+
+		await expect(
+			saveRecap(db, 'user-1', sessionId, [
+				{
+					attemptId: attempt.id,
+					outcome: 'partial',
+					confidence: 3,
+					mistakeIds: [],
+					patternIds: []
+				}
+			])
+		).rejects.toThrow('Session cannot be recapped.');
+
+		await pauseSession(db, 'user-1', sessionId);
+		await expect(
+			saveRecap(db, 'user-1', sessionId, [
+				{
+					attemptId: attempt.id,
+					outcome: 'partial',
+					confidence: 3,
+					mistakeIds: [],
+					patternIds: []
+				}
+			])
+		).resolves.toBeUndefined();
+	});
+
 	it('rejects mistakes and patterns that belong to another user', async () => {
 		seedUser('user-1');
 		seedUser('user-2');
@@ -187,6 +247,7 @@ describe('recap validation', () => {
 		await acknowledgeBriefing(db, 'user-1', sessionId);
 		await activateProblem(db, 'user-1', sessionId, 'two-sum');
 		const attempt = db.select().from(attempts).get()!;
+		await pauseSession(db, 'user-1', sessionId);
 
 		db.insert(mistakes)
 			.values({
@@ -231,5 +292,18 @@ describe('recap validation', () => {
 
 		expect(db.select().from(attemptMistakes).all()).toEqual([]);
 		expect(db.select().from(attemptPatterns).all()).toEqual([]);
+	});
+});
+
+describe('catalog creation', () => {
+	it('rejects blank mistake and pattern names in service logic', async () => {
+		seedUser('user-1');
+
+		await expect(
+			createMistake(db, { userId: 'user-1', name: '   ' })
+		).rejects.toThrow('Name is required.');
+		await expect(
+			createPattern(db, { userId: 'user-1', name: '   ' })
+		).rejects.toThrow('Name is required.');
 	});
 });

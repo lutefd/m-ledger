@@ -27,6 +27,7 @@ export async function createMistake(
 	}
 ) {
 	const normalizedName = normalizeName(input.name);
+	if (!normalizedName) throw new Error('Name is required.');
 	await db
 		.insert(mistakes)
 		.values({
@@ -59,6 +60,7 @@ export async function createPattern(
 	input: { userId: string; name: string; recognitionTrigger?: string }
 ) {
 	const normalizedName = normalizeName(input.name);
+	if (!normalizedName) throw new Error('Name is required.');
 	await db
 		.insert(patterns)
 		.values({

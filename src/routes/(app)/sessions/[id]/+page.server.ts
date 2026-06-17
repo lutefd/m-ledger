@@ -8,6 +8,10 @@ import {
 	listProblems
 } from '$lib/server/services/catalog';
 import {
+	mistakeInputSchema,
+	patternInputSchema
+} from '$lib/server/validation/catalog';
+import {
 	acknowledgeBriefing,
 	addProblemToSession,
 	activateProblem,
@@ -94,21 +98,27 @@ export const actions: Actions = {
 	},
 	createMistake: async ({ request, locals }) => {
 		const user = requireUser(locals);
-		const form = await request.formData();
+		const parsed = mistakeInputSchema.safeParse(
+			Object.fromEntries(await request.formData())
+		);
+		if (!parsed.success)
+			return fail(400, { message: 'Check the mistake form.' });
 		const mistake = await createMistake(db, {
 			userId: user.id,
-			name: String(form.get('name') ?? ''),
-			guardrail: String(form.get('guardrail') ?? '')
+			...parsed.data
 		});
 		return { ok: true, createdMistakeId: mistake?.id };
 	},
 	createPattern: async ({ request, locals }) => {
 		const user = requireUser(locals);
-		const form = await request.formData();
+		const parsed = patternInputSchema.safeParse(
+			Object.fromEntries(await request.formData())
+		);
+		if (!parsed.success)
+			return fail(400, { message: 'Check the pattern form.' });
 		const pattern = await createPattern(db, {
 			userId: user.id,
-			name: String(form.get('name') ?? ''),
-			recognitionTrigger: String(form.get('recognitionTrigger') ?? '')
+			...parsed.data
 		});
 		return { ok: true, createdPatternId: pattern?.id };
 	},

@@ -449,7 +449,7 @@ export async function updateSessionNotes(
 	document: unknown
 ) {
 	const notesDocument = serializeRichTextDocument(document, 'notebook');
-	await db
+	const result = await db
 		.update(studySessions)
 		.set({ notesDocument })
 		.where(
@@ -459,6 +459,7 @@ export async function updateSessionNotes(
 				ne(studySessions.status, 'completed')
 			)
 		);
+	if (result.changes === 0) throw new Error('Session is not open.');
 }
 
 export async function addProblemToSession(
@@ -583,7 +584,7 @@ export async function saveRecap(
 				)
 			})
 			.sync();
-		if (!session || session.status === 'completed')
+		if (!session || session.status !== 'paused')
 			throw new Error('Session cannot be recapped.');
 
 		for (const input of parsedInputs) {
