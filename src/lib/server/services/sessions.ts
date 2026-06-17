@@ -8,23 +8,17 @@ import {
 	briefingRedos,
 	briefings,
 	mistakes,
+	patterns,
 	problems,
 	sessionQueue,
 	studySessions,
 	timerSegments
 } from '$lib/server/db/schema';
 import { isoNow } from '$lib/utils/dates';
-import { generateBriefing } from './briefing';
+import { recapSchema, type RecapInput } from '$lib/server/validation/sessions';
+import { generateBriefing, getBriefingPreview } from './briefing';
 
-export type RecapAttemptInput = {
-	attemptId: string;
-	outcome: 'solved_independently' | 'solved_with_help' | 'partial' | 'stuck';
-	confidence: number;
-	notes?: string;
-	redoDate?: string;
-	mistakeIds: string[];
-	patternIds: string[];
-};
+export type RecapAttemptInput = RecapInput[number];
 
 export async function createStudySession(
 	db: Db,
@@ -299,7 +293,7 @@ export async function pauseSession(db: Db, userId: string, sessionId: string) {
 				)
 			})
 			.sync();
-		if (!session || session.status === 'completed')
+		if (!session || session.status !== 'active')
 			throw new Error('Session cannot be paused.');
 		tx.update(timerSegments)
 			.set({ endedAt: now })
@@ -382,6 +376,7 @@ export async function saveRecap(
 	sessionId: string,
 	inputs: RecapAttemptInput[]
 ) {
+	const parsedInputs = recapSchema.parse(inputs);
 	const now = isoNow();
 	db.transaction((tx) => {
 		const session = tx.query.studySessions
@@ -395,7 +390,9 @@ export async function saveRecap(
 		if (!session || session.status === 'completed')
 			throw new Error('Session cannot be recapped.');
 
-		for (const input of inputs) {
+		for (const input of parsedInputs) {
+			const mistakeIds = [...new Set(input.mistakeIds)];
+			const patternIds = [...new Set(input.patternIds)];
 			const attempt = tx.query.attempts
 				.findFirst({
 					where: and(
@@ -406,6 +403,28 @@ export async function saveRecap(
 				})
 				.sync();
 			if (!attempt) throw new Error('Attempt not found.');
+			if (mistakeIds.length) {
+				const ownedMistakes = tx
+					.select({ id: mistakes.id })
+					.from(mistakes)
+					.where(
+						and(eq(mistakes.userId, userId), inArray(mistakes.id, mistakeIds))
+					)
+					.all();
+				if (ownedMistakes.length !== mistakeIds.length)
+					throw new Error('One or more mistakes were not found.');
+			}
+			if (patternIds.length) {
+				const ownedPatterns = tx
+					.select({ id: patterns.id })
+					.from(patterns)
+					.where(
+						and(eq(patterns.userId, userId), inArray(patterns.id, patternIds))
+					)
+					.all();
+				if (ownedPatterns.length !== patternIds.length)
+					throw new Error('One or more patterns were not found.');
+			}
 			tx.update(attempts)
 				.set({
 					outcome: input.outcome,
@@ -422,20 +441,20 @@ export async function saveRecap(
 			tx.delete(attemptPatterns)
 				.where(eq(attemptPatterns.attemptId, input.attemptId))
 				.run();
-			if (input.mistakeIds.length) {
+			if (mistakeIds.length) {
 				tx.insert(attemptMistakes)
 					.values(
-						input.mistakeIds.map((mistakeId) => ({
+						mistakeIds.map((mistakeId) => ({
 							attemptId: input.attemptId,
 							mistakeId
 						}))
 					)
 					.run();
 			}
-			if (input.patternIds.length) {
+			if (patternIds.length) {
 				tx.insert(attemptPatterns)
 					.values(
-						input.patternIds.map((patternId) => ({
+						patternIds.map((patternId) => ({
 							attemptId: input.attemptId,
 							patternId
 						}))
@@ -462,37 +481,8 @@ export async function saveRecap(
 
 export async function getTodaySnapshot(db: Db, userId: string) {
 	const recent = await listRecentSessions(db, userId, 5);
-	const latestBriefing = await db.query.briefings.findFirst({
-		where: eq(briefings.userId, userId),
-		orderBy: [desc(briefings.createdAt)]
-	});
-	if (!latestBriefing) return { recent, mistakes: [], redos: [] };
-	const [mistakeRows, redoRows] = await Promise.all([
-		db
-			.select({
-				rank: briefingMistakes.rank,
-				occurrenceCount: briefingMistakes.occurrenceCount,
-				lastOccurrence: briefingMistakes.lastOccurrence,
-				name: mistakes.name,
-				guardrail: mistakes.guardrail
-			})
-			.from(briefingMistakes)
-			.innerJoin(mistakes, eq(mistakes.id, briefingMistakes.mistakeId))
-			.where(eq(briefingMistakes.briefingId, latestBriefing.id))
-			.orderBy(asc(briefingMistakes.rank)),
-		db
-			.select({
-				rank: briefingRedos.rank,
-				dueDate: briefingRedos.dueDate,
-				title: problems.title,
-				url: problems.url
-			})
-			.from(briefingRedos)
-			.innerJoin(problems, eq(problems.id, briefingRedos.problemId))
-			.where(eq(briefingRedos.briefingId, latestBriefing.id))
-			.orderBy(asc(briefingRedos.rank))
-	]);
-	return { recent, mistakes: mistakeRows, redos: redoRows };
+	const preview = await getBriefingPreview(db, userId);
+	return { recent, mistakes: preview.mistakes, redos: preview.redos };
 }
 
 export async function getProblemHistory(

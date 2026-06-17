@@ -1,4 +1,4 @@
-import { desc, eq, sql } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import type { Db } from '$lib/server/db/client';
 import {
 	attemptMistakes,
@@ -6,7 +6,8 @@ import {
 	briefingMistakes,
 	briefingRedos,
 	briefings,
-	mistakes
+	mistakes,
+	problems
 } from '$lib/server/db/schema';
 import { dateOnly, isoNow } from '$lib/utils/dates';
 
@@ -26,11 +27,16 @@ export function rankMistakeCandidates(
 	const previous60Start = new Date(now);
 	previous60Start.setUTCDate(previous60Start.getUTCDate() - 90);
 
-	const ranked = candidates
+	const normalized = candidates.map((candidate) => ({
+		...candidate,
+		occurrences: candidate.occurrences
+			.filter((occurrence) => occurrence.completedAt)
+			.sort((a, b) => b.completedAt.localeCompare(a.completedAt))
+	}));
+
+	const ranked = normalized
 		.map((candidate) => {
-			const occurrences = candidate.occurrences
-				.filter((occurrence) => occurrence.completedAt)
-				.sort((a, b) => b.completedAt.localeCompare(a.completedAt));
+			const occurrences = candidate.occurrences;
 			const recent30 = occurrences.filter(
 				(occurrence) => occurrence.completedAt >= recent30Start.toISOString()
 			).length;
@@ -77,7 +83,7 @@ export function rankMistakeCandidates(
 	if (selected.length >= 3) return selected;
 
 	const selectedIds = new Set(selected.map((candidate) => candidate.id));
-	const fillers = candidates
+	const fillers = normalized
 		.filter((candidate) => !selectedIds.has(candidate.id))
 		.map((candidate) => ({
 			...candidate,
@@ -102,6 +108,92 @@ export function rankMistakeCandidates(
 	return [...selected, ...fillers].slice(0, 5);
 }
 
+export async function getBriefingPreview(
+	db: Db,
+	userId: string,
+	now = new Date()
+) {
+	const rows = await db
+		.select({
+			mistakeId: mistakes.id,
+			name: mistakes.name,
+			guardrail: mistakes.guardrail,
+			completedAt: attempts.completedAt,
+			confidence: attempts.confidence
+		})
+		.from(mistakes)
+		.innerJoin(attemptMistakes, eq(attemptMistakes.mistakeId, mistakes.id))
+		.innerJoin(attempts, eq(attempts.id, attemptMistakes.attemptId))
+		.where(eq(mistakes.userId, userId));
+
+	const grouped = new Map<string, MistakeCandidate>();
+	for (const row of rows) {
+		if (!row.completedAt) continue;
+		const current = grouped.get(row.mistakeId) ?? {
+			id: row.mistakeId,
+			name: row.name,
+			guardrail: row.guardrail,
+			occurrences: []
+		};
+		current.occurrences.push({
+			completedAt: row.completedAt,
+			confidence: row.confidence
+		});
+		grouped.set(row.mistakeId, current);
+	}
+
+	const rankedMistakes = rankMistakeCandidates([...grouped.values()], now);
+
+	const redoRows = await db
+		.select({
+			attemptId: attempts.id,
+			problemId: attempts.problemId,
+			redoDate: attempts.redoDate,
+			completedAt: attempts.completedAt,
+			title: problems.title,
+			url: problems.url
+		})
+		.from(attempts)
+		.innerJoin(problems, eq(problems.id, attempts.problemId))
+		.where(eq(attempts.userId, userId))
+		.orderBy(desc(attempts.completedAt));
+
+	const latestByProblem = new Map<string, (typeof redoRows)[number]>();
+	for (const row of redoRows) {
+		if (!row.completedAt || latestByProblem.has(row.problemId)) continue;
+		latestByProblem.set(row.problemId, row);
+	}
+
+	const redos = [...latestByProblem.values()]
+		.filter((redo) => redo.redoDate !== null && redo.redoDate <= dateOnly(now))
+		.sort(
+			(a, b) =>
+				(a.redoDate ?? '').localeCompare(b.redoDate ?? '') ||
+				(b.completedAt ?? '').localeCompare(a.completedAt ?? '')
+		);
+
+	return {
+		mistakes: rankedMistakes.map((mistake, index) => ({
+			id: mistake.id,
+			rank: index + 1,
+			score: Math.round(mistake.score * 100),
+			occurrenceCount: mistake.occurrenceCount,
+			lastOccurrence: mistake.lastOccurrence!,
+			averageConfidence: Math.round(mistake.averageConfidence * 100),
+			name: mistake.name,
+			guardrail: mistake.guardrail
+		})),
+		redos: redos.map((redo, index) => ({
+			rank: index + 1,
+			problemId: redo.problemId,
+			attemptId: redo.attemptId,
+			dueDate: redo.redoDate!,
+			title: redo.title,
+			url: redo.url
+		}))
+	};
+}
+
 export async function generateBriefing(
 	db: Db,
 	userId: string,
@@ -110,6 +202,7 @@ export async function generateBriefing(
 ) {
 	const createdAt = isoNow(now);
 	const briefingId = crypto.randomUUID();
+	const preview = await getBriefingPreview(db, userId, now);
 
 	db.transaction((tx) => {
 		tx.insert(briefings)
@@ -121,88 +214,32 @@ export async function generateBriefing(
 			})
 			.run();
 
-		const rows = tx
-			.select({
-				mistakeId: mistakes.id,
-				name: mistakes.name,
-				guardrail: mistakes.guardrail,
-				completedAt: attempts.completedAt,
-				confidence: attempts.confidence
-			})
-			.from(mistakes)
-			.innerJoin(attemptMistakes, eq(attemptMistakes.mistakeId, mistakes.id))
-			.innerJoin(attempts, eq(attempts.id, attemptMistakes.attemptId))
-			.where(eq(mistakes.userId, userId))
-			.all();
-
-		const grouped = new Map<string, MistakeCandidate>();
-		for (const row of rows) {
-			if (!row.completedAt) continue;
-			const current = grouped.get(row.mistakeId) ?? {
-				id: row.mistakeId,
-				name: row.name,
-				guardrail: row.guardrail,
-				occurrences: []
-			};
-			current.occurrences.push({
-				completedAt: row.completedAt,
-				confidence: row.confidence
-			});
-			grouped.set(row.mistakeId, current);
-		}
-
-		const ranked = rankMistakeCandidates([...grouped.values()], now);
-		if (ranked.length > 0) {
+		if (preview.mistakes.length > 0) {
 			tx.insert(briefingMistakes)
 				.values(
-					ranked.map((mistake, index) => ({
+					preview.mistakes.map((mistake) => ({
 						briefingId,
 						mistakeId: mistake.id,
-						rank: index + 1,
-						score: Math.round(mistake.score * 100),
+						rank: mistake.rank,
+						score: mistake.score,
 						occurrenceCount: mistake.occurrenceCount,
 						lastOccurrence: mistake.lastOccurrence,
-						averageConfidence: Math.round(mistake.averageConfidence * 100)
+						averageConfidence: mistake.averageConfidence
 					}))
 				)
 				.onConflictDoNothing()
 				.run();
 		}
 
-		const redoRows = tx
-			.select({
-				attemptId: attempts.id,
-				problemId: attempts.problemId,
-				redoDate: attempts.redoDate,
-				completedAt: attempts.completedAt
-			})
-			.from(attempts)
-			.where(
-				sql`${attempts.userId} = ${userId} and ${attempts.redoDate} is not null and ${attempts.redoDate} <= ${dateOnly(now)} and ${attempts.completedAt} is not null`
-			)
-			.orderBy(desc(attempts.completedAt))
-			.all();
-
-		const latestByProblem = new Map<string, (typeof redoRows)[number]>();
-		for (const row of redoRows) {
-			if (!latestByProblem.has(row.problemId))
-				latestByProblem.set(row.problemId, row);
-		}
-
-		const redos = [...latestByProblem.values()].sort(
-			(a, b) =>
-				(a.redoDate ?? '').localeCompare(b.redoDate ?? '') ||
-				(b.completedAt ?? '').localeCompare(a.completedAt ?? '')
-		);
-		if (redos.length > 0) {
+		if (preview.redos.length > 0) {
 			tx.insert(briefingRedos)
 				.values(
-					redos.map((redo, index) => ({
+					preview.redos.map((redo) => ({
 						briefingId,
 						problemId: redo.problemId,
 						attemptId: redo.attemptId,
-						dueDate: redo.redoDate!,
-						rank: index + 1
+						dueDate: redo.dueDate,
+						rank: redo.rank
 					}))
 				)
 				.onConflictDoNothing()

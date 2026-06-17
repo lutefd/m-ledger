@@ -1,4 +1,4 @@
-import { addDays, dateOnly } from '$lib/utils/dates';
+import { addDays, addDaysToDateOnly, dateOnly } from '$lib/utils/dates';
 
 const intervals: Record<number, number> = {
 	1: 1,
@@ -10,9 +10,11 @@ const intervals: Record<number, number> = {
 
 export function suggestRedoDate(
 	confidence: number,
-	completedAt = new Date()
+	completedAt: Date | string = new Date()
 ): string {
 	const days = intervals[confidence];
 	if (!days) throw new Error('Confidence must be between 1 and 5.');
+	if (typeof completedAt === 'string')
+		return addDaysToDateOnly(completedAt, days);
 	return dateOnly(addDays(completedAt, days));
 }

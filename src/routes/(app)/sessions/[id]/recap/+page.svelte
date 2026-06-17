@@ -3,24 +3,16 @@
 
 	let { data, form } = $props();
 	const attempts = $derived(data.queue.filter((item) => item.attemptId));
-	const redoIntervals: Record<string, number> = {
-		'1': 1,
-		'2': 3,
-		'3': 7,
-		'4': 14,
-		'5': 30
-	};
 
 	function suggestRedoDate(event: Event, attemptId: string) {
 		const confidence = (event.currentTarget as HTMLSelectElement).value;
-		const days = redoIntervals[confidence];
+		const suggestion = data.redoSuggestions[confidence];
 		const input = document.getElementById(
 			`redoDate:${attemptId}`
 		) as HTMLInputElement | null;
-		if (!days || !input || input.value) return;
+		if (!suggestion || !input || input.value) return;
 
-		const date = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-		input.value = date.toISOString().slice(0, 10);
+		input.value = suggestion;
 	}
 </script>
 
