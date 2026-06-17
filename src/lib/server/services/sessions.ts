@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import type { Db } from '$lib/server/db/client';
 import {
 	attemptMistakes,
@@ -16,7 +16,9 @@ import {
 } from '$lib/server/db/schema';
 import { isoNow } from '$lib/utils/dates';
 import { recapSchema, type RecapInput } from '$lib/server/validation/sessions';
+import { serializeRichTextDocument } from '$lib/server/validation/rich-text';
 import { generateBriefing, getBriefingPreview } from './briefing';
+import { createProblem } from './problems';
 
 export type RecapAttemptInput = RecapInput[number];
 
@@ -25,6 +27,8 @@ export async function createStudySession(
 	userId: string,
 	problemIds: string[]
 ) {
+	const openSession = await getUnfinishedSession(db, userId);
+	if (openSession) return openSession.id;
 	if (problemIds.length === 0) throw new Error('Choose at least one problem.');
 	const owned = await db
 		.select({ id: problems.id })
@@ -58,18 +62,71 @@ export async function createStudySession(
 	return sessionId;
 }
 
+export async function getUnfinishedSession(db: Db, userId: string) {
+	return db.query.studySessions.findFirst({
+		where: and(
+			eq(studySessions.userId, userId),
+			inArray(studySessions.status, ['briefing', 'active', 'paused'])
+		),
+		orderBy: [desc(studySessions.startedAt)]
+	});
+}
+
+export async function getOpenSessionSummary(db: Db, userId: string) {
+	const session = await getUnfinishedSession(db, userId);
+	if (!session) return null;
+	const openSegment = await db
+		.select({
+			startedAt: timerSegments.startedAt,
+			attemptId: timerSegments.attemptId,
+			title: problems.title
+		})
+		.from(timerSegments)
+		.leftJoin(attempts, eq(attempts.id, timerSegments.attemptId))
+		.leftJoin(problems, eq(problems.id, attempts.problemId))
+		.where(
+			and(
+				eq(timerSegments.sessionId, session.id),
+				isNull(timerSegments.endedAt)
+			)
+		)
+		.limit(1);
+	const segments = await db
+		.select({
+			startedAt: timerSegments.startedAt,
+			endedAt: timerSegments.endedAt
+		})
+		.from(timerSegments)
+		.where(eq(timerSegments.sessionId, session.id));
+	return {
+		id: session.id,
+		status: session.status,
+		currentAttemptId: openSegment[0]?.attemptId ?? null,
+		currentProblemTitle: openSegment[0]?.title ?? null,
+		elapsedMs: elapsedMs(segments),
+		openSegmentStartedAt: openSegment[0]?.startedAt ?? null
+	};
+}
+
 export async function listRecentSessions(db: Db, userId: string, limit = 10) {
-	return db
+	const rows = await db
 		.select({
 			id: studySessions.id,
 			status: studySessions.status,
 			startedAt: studySessions.startedAt,
-			finishedAt: studySessions.finishedAt
+			finishedAt: studySessions.finishedAt,
+			elapsedMs: sql<number>`coalesce(sum((julianday(${timerSegments.endedAt}) - julianday(${timerSegments.startedAt})) * 86400000), 0)`
 		})
 		.from(studySessions)
+		.leftJoin(timerSegments, eq(timerSegments.sessionId, studySessions.id))
 		.where(eq(studySessions.userId, userId))
+		.groupBy(studySessions.id)
 		.orderBy(desc(studySessions.startedAt))
 		.limit(limit);
+	return rows.map((row) => ({
+		...row,
+		elapsedMs: Math.round(Number(row.elapsedMs ?? 0))
+	}));
 }
 
 export async function getSessionDetail(
@@ -94,7 +151,8 @@ export async function getSessionDetail(
 			slug: problems.slug,
 			attemptId: attempts.id,
 			outcome: attempts.outcome,
-			confidence: attempts.confidence
+			confidence: attempts.confidence,
+			notesDocument: attempts.notesDocument
 		})
 		.from(sessionQueue)
 		.innerJoin(problems, eq(problems.id, sessionQueue.problemId))
@@ -147,15 +205,45 @@ export async function getSessionDetail(
 		.where(eq(timerSegments.sessionId, sessionId))
 		.orderBy(asc(timerSegments.startedAt));
 
+	const elapsedByAttempt = elapsedMsByAttempt(segments);
 	return {
 		session,
-		queue,
+		queue: queue.map((item) => ({
+			...item,
+			elapsedMs: item.attemptId
+				? (elapsedByAttempt.get(item.attemptId) ?? 0)
+				: 0
+		})),
 		briefing,
 		briefingMistakes: briefingMistakeRows,
 		briefingRedos: briefingRedoRows,
 		segments,
 		elapsedMs: elapsedMs(segments)
 	};
+}
+
+function elapsedMsByAttempt(
+	segments: {
+		attemptId: string | null;
+		startedAt: string;
+		endedAt: string | null;
+	}[],
+	now = new Date()
+) {
+	const result = new Map<string, number>();
+	for (const segment of segments) {
+		if (!segment.attemptId) continue;
+		const end = segment.endedAt ? new Date(segment.endedAt) : now;
+		const duration = Math.max(
+			0,
+			end.getTime() - new Date(segment.startedAt).getTime()
+		);
+		result.set(
+			segment.attemptId,
+			(result.get(segment.attemptId) ?? 0) + duration
+		);
+	}
+	return result;
 }
 
 export function elapsedMs(
@@ -293,8 +381,51 @@ export async function pauseSession(db: Db, userId: string, sessionId: string) {
 				)
 			})
 			.sync();
-		if (!session || session.status !== 'active')
+		if (
+			!session ||
+			session.status === 'briefing' ||
+			session.status === 'completed'
+		)
 			throw new Error('Session cannot be paused.');
+		if (session.status === 'paused') return;
+		tx.update(timerSegments)
+			.set({ endedAt: now })
+			.where(
+				and(
+					eq(timerSegments.sessionId, sessionId),
+					isNull(timerSegments.endedAt)
+				)
+			)
+			.run();
+		tx.update(studySessions)
+			.set({ status: 'paused' })
+			.where(eq(studySessions.id, sessionId))
+			.run();
+	});
+}
+
+export async function enterSessionRecap(
+	db: Db,
+	userId: string,
+	sessionId: string
+) {
+	const now = isoNow();
+	db.transaction((tx) => {
+		const session = tx.query.studySessions
+			.findFirst({
+				where: and(
+					eq(studySessions.userId, userId),
+					eq(studySessions.id, sessionId)
+				)
+			})
+			.sync();
+		if (
+			!session ||
+			session.status === 'briefing' ||
+			session.status === 'completed'
+		) {
+			throw new Error('Session cannot enter recap.');
+		}
 		tx.update(timerSegments)
 			.set({ endedAt: now })
 			.where(
@@ -315,14 +446,79 @@ export async function updateSessionNotes(
 	db: Db,
 	userId: string,
 	sessionId: string,
-	notes: string
+	document: unknown
 ) {
+	const notesDocument = serializeRichTextDocument(document, 'notebook');
 	await db
 		.update(studySessions)
-		.set({ notes: notes.trim() || null })
+		.set({ notesDocument })
 		.where(
-			and(eq(studySessions.userId, userId), eq(studySessions.id, sessionId))
+			and(
+				eq(studySessions.userId, userId),
+				eq(studySessions.id, sessionId),
+				ne(studySessions.status, 'completed')
+			)
 		);
+}
+
+export async function addProblemToSession(
+	db: Db,
+	userId: string,
+	sessionId: string,
+	problemId: string
+) {
+	return db.transaction((tx) => {
+		const session = tx.query.studySessions
+			.findFirst({
+				where: and(
+					eq(studySessions.userId, userId),
+					eq(studySessions.id, sessionId)
+				)
+			})
+			.sync();
+		if (!session || session.status === 'completed') {
+			throw new Error('Session is not open.');
+		}
+		const problem = tx.query.problems
+			.findFirst({
+				where: and(eq(problems.userId, userId), eq(problems.id, problemId))
+			})
+			.sync();
+		if (!problem) throw new Error('Problem was not found.');
+		const existing = tx.query.sessionQueue
+			.findFirst({
+				where: and(
+					eq(sessionQueue.sessionId, sessionId),
+					eq(sessionQueue.problemId, problemId)
+				)
+			})
+			.sync();
+		if (existing) return existing;
+		const positionRow = tx
+			.select({
+				position: sql<number>`coalesce(max(${sessionQueue.position}), 0) + 1`
+			})
+			.from(sessionQueue)
+			.where(eq(sessionQueue.sessionId, sessionId))
+			.get();
+		const queueItem = {
+			sessionId,
+			problemId,
+			position: Number(positionRow?.position ?? 1)
+		};
+		tx.insert(sessionQueue).values(queueItem).run();
+		return queueItem;
+	});
+}
+
+export async function createProblemAndAddToSession(
+	db: Db,
+	userId: string,
+	sessionId: string,
+	url: string
+) {
+	const problem = await createProblem(db, { userId, url });
+	return addProblemToSession(db, userId, sessionId, problem.id);
 }
 
 export async function deleteStudySession(
@@ -429,7 +625,10 @@ export async function saveRecap(
 				.set({
 					outcome: input.outcome,
 					confidence: input.confidence,
-					notes: input.notes?.trim() || null,
+					notesDocument: serializeRichTextDocument(
+						input.notesDocument,
+						'recap'
+					),
 					redoDate: input.redoDate || null,
 					completedAt: now
 				})
@@ -501,11 +700,15 @@ export async function getProblemHistory(
 			confidence: attempts.confidence,
 			redoDate: attempts.redoDate,
 			notes: attempts.notes,
+			notesDocument: attempts.notesDocument,
 			completedAt: attempts.completedAt,
-			sessionId: attempts.sessionId
+			sessionId: attempts.sessionId,
+			elapsedMs: sql<number>`coalesce(sum((julianday(${timerSegments.endedAt}) - julianday(${timerSegments.startedAt})) * 86400000), 0)`
 		})
 		.from(attempts)
+		.leftJoin(timerSegments, eq(timerSegments.attemptId, attempts.id))
 		.where(and(eq(attempts.userId, userId), eq(attempts.problemId, problemId)))
+		.groupBy(attempts.id)
 		.orderBy(desc(attempts.createdAt));
 	const totalMsRows = await db
 		.select({

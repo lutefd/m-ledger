@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import Database from 'better-sqlite3';
 import { eq } from 'drizzle-orm';
@@ -22,7 +22,6 @@ import {
 	attemptPatterns,
 	attempts,
 	briefingRedos,
-	briefings,
 	mistakes,
 	patterns,
 	problems,
@@ -34,13 +33,18 @@ let sqlite: Database.Database;
 let db: Db;
 
 function migrate(sqlite: Database.Database) {
-	const migration = readFileSync(
-		resolve(process.cwd(), 'drizzle/0000_slippery_ken_ellis.sql'),
-		'utf8'
-	);
-	for (const statement of migration.split('--> statement-breakpoint')) {
-		const sql = statement.trim();
-		if (sql) sqlite.exec(sql);
+	const files = readdirSync(resolve(process.cwd(), 'drizzle'))
+		.filter((file) => file.endsWith('.sql'))
+		.sort();
+	for (const file of files) {
+		const migration = readFileSync(
+			resolve(process.cwd(), 'drizzle', file),
+			'utf8'
+		);
+		for (const statement of migration.split('--> statement-breakpoint')) {
+			const sql = statement.trim();
+			if (sql) sqlite.exec(sql);
+		}
 	}
 }
 
