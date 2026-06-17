@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { Trash2 } from '@lucide/svelte';
+	import { formatDuration } from '$lib/utils/time';
 
 	let { data } = $props();
 
@@ -24,6 +25,9 @@
 					<a class="min-w-0 flex-1" href={`/sessions/${session.id}`}>
 						<span>{session.startedAt.slice(0, 10)}</span>
 						<span class="ml-3 text-sm text-muted">{session.status}</span>
+						<span class="ml-3 text-sm text-muted"
+							>{formatDuration(session.elapsedMs)}</span
+						>
 					</a>
 					<form
 						method="POST"
