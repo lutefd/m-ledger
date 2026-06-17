@@ -34,9 +34,7 @@ const allowedNodes = new Set([
 	'taskList',
 	'taskItem',
 	'codeBlock',
-	'hardBreak',
-	'inlineMath',
-	'blockMath'
+	'hardBreak'
 ]);
 const allowedMarks = new Set(['bold', 'italic', 'code', 'link']);
 
@@ -139,9 +137,16 @@ function validateAttrs(type: string, attrs: unknown) {
 		}
 		return;
 	}
-	if (type === 'inlineMath' || type === 'blockMath') {
-		if (keys.length !== 1 || typeof attrs.latex !== 'string') {
-			throw new Error('Math attributes are malformed.');
+	if (type === 'codeBlock') {
+		if (keys.some((key) => key !== 'language')) {
+			throw new Error('Code block attributes are not supported.');
+		}
+		if (
+			attrs.language !== undefined &&
+			attrs.language !== null &&
+			typeof attrs.language !== 'string'
+		) {
+			throw new Error('Code block language is malformed.');
 		}
 		return;
 	}
