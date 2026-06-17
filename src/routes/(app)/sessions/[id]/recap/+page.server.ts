@@ -2,7 +2,12 @@ import { fail, redirect, type Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db/client';
 import { requireUser } from '$lib/server/guards';
-import { listMistakes, listPatterns } from '$lib/server/services/catalog';
+import {
+	createMistake,
+	createPattern,
+	listMistakes,
+	listPatterns
+} from '$lib/server/services/catalog';
 import { getSessionDetail, saveRecap } from '$lib/server/services/sessions';
 import { suggestRedoDate } from '$lib/server/services/scheduling';
 import { recapSchema } from '$lib/server/validation/sessions';
@@ -35,7 +40,7 @@ export const actions: Actions = {
 				attemptId,
 				outcome: String(form.get(`outcome:${attemptId}`)),
 				confidence: Number(form.get(`confidence:${attemptId}`)),
-				notes: String(form.get(`notes:${attemptId}`) ?? ''),
+				notesDocument: String(form.get(`notesDocument:${attemptId}`) ?? ''),
 				redoDate: String(form.get(`redoDate:${attemptId}`) ?? ''),
 				mistakeIds: form.getAll(`mistakes:${attemptId}`).map(String),
 				patternIds: form.getAll(`patterns:${attemptId}`).map(String)
@@ -59,5 +64,25 @@ export const actions: Actions = {
 			});
 		}
 		throw redirect(303, `/sessions/${params.id}`);
+	},
+	createMistake: async ({ request, locals }) => {
+		const user = requireUser(locals);
+		const form = await request.formData();
+		const mistake = await createMistake(db, {
+			userId: user.id,
+			name: String(form.get('name') ?? ''),
+			guardrail: String(form.get('guardrail') ?? '')
+		});
+		return { ok: true, createdMistakeId: mistake?.id };
+	},
+	createPattern: async ({ request, locals }) => {
+		const user = requireUser(locals);
+		const form = await request.formData();
+		const pattern = await createPattern(db, {
+			userId: user.id,
+			name: String(form.get('name') ?? ''),
+			recognitionTrigger: String(form.get('recognitionTrigger') ?? '')
+		});
+		return { ok: true, createdPatternId: pattern?.id };
 	}
 };
