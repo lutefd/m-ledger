@@ -1,7 +1,7 @@
 import { redirect, type Handle } from '@sveltejs/kit';
 import { auth } from '$lib/server/auth';
 
-const publicPaths = ['/login', '/setup', '/api/health'];
+const publicPaths = ['/login', '/setup', '/api/health', '/api/export/weekly'];
 
 export const handle: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname === '/api/auth/sign-up/email') {

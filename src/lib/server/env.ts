@@ -17,6 +17,8 @@ const envSchema = z.object({
 		.string()
 		.min(16)
 		.default(nodeEnv === 'production' ? '' : 'development-setup-token'),
+	EXPORT_API_TOKEN: z.string().min(32).optional(),
+	EXPORT_API_USER_EMAIL: z.email().optional(),
 	NODE_ENV: z.enum(['development', 'test', 'production']).default('development')
 });
 
