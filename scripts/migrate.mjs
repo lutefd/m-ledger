@@ -9,8 +9,8 @@ const migrationsFolder = 'drizzle';
 const databasePath =
 	process.env.DATABASE_PATH ??
 	(process.env.NODE_ENV === 'production'
-		? '/data/mistake-ledger.sqlite'
-		: '.data/mistake-ledger.sqlite');
+		? '/data/algodrill.sqlite'
+		: '.data/algodrill.sqlite');
 mkdirSync(dirname(databasePath), { recursive: true });
 
 const sqlite = new Database(databasePath);

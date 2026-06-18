@@ -1,9 +1,9 @@
 dbs:
-  - path: /data/mistake-ledger.sqlite
+  - path: /data/algodrill.sqlite
     replicas:
       - type: s3
         bucket: ${LITESTREAM_BUCKET}
-        path: mistake-ledger
+        path: algodrill
         endpoint: ${LITESTREAM_ENDPOINT}
         region: ${LITESTREAM_REGION}
         access-key-id: ${LITESTREAM_ACCESS_KEY_ID}

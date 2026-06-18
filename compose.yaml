@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_PATH: /data/mistake-ledger.sqlite
+      DATABASE_PATH: /data/algodrill.sqlite
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL}
       SETUP_TOKEN: ${SETUP_TOKEN}

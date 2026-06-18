@@ -14,7 +14,7 @@ RUN npm prune --omit=dev
 FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-ENV DATABASE_PATH=/data/mistake-ledger.sqlite
+ENV DATABASE_PATH=/data/algodrill.sqlite
 RUN apk add --no-cache tini
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=build --chown=app:app /app/build ./build
