@@ -9,6 +9,8 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL}
       SETUP_TOKEN: ${SETUP_TOKEN}
+      EXPORT_API_TOKEN: ${EXPORT_API_TOKEN}
+      EXPORT_API_USER_EMAIL: ${EXPORT_API_USER_EMAIL}
       TZ: America/Sao_Paulo
     volumes:
       - app-data:/data
