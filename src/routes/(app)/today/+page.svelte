@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-	<title>Today | Mistake Ledger</title>
+	<title>Today | AlgoDrill</title>
 </svelte:head>
 
 <main class="mx-auto max-w-6xl space-y-8 px-6 py-8">
@@ -11,7 +11,9 @@
 		<p class="text-sm font-semibold uppercase tracking-wide text-accent">
 			Today
 		</p>
-		<h1 class="text-3xl font-semibold">Start with the mistakes that repeat.</h1>
+		<h1 class="text-3xl font-semibold">
+			Drill the patterns that decide the next solve.
+		</h1>
 		<a
 			class="inline-flex rounded bg-accent px-4 py-2 font-semibold text-white"
 			href="/sessions/new">New session</a

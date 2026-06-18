@@ -44,7 +44,7 @@
 	<header class="border-b border-line bg-paper/95">
 		<div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
 			<a href={resolve('/(app)/today')} class="text-lg font-semibold"
-				>Mistake Ledger</a
+				>AlgoDrill</a
 			>
 			<nav
 				class="hidden items-center gap-2 md:flex"

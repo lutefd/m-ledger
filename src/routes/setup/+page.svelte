@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-	<title>Setup | Mistake Ledger</title>
+	<title>Setup | AlgoDrill</title>
 </svelte:head>
 
 <main

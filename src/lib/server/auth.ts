@@ -25,7 +25,7 @@ export const auth = betterAuth({
 		}
 	},
 	advanced: {
-		cookiePrefix: 'mistake-ledger',
+		cookiePrefix: 'algodrill',
 		useSecureCookies: env.NODE_ENV === 'production'
 	},
 	plugins: [sveltekitCookies(getRequestEvent)]

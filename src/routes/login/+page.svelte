@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-	<title>Login | Mistake Ledger</title>
+	<title>Login | AlgoDrill</title>
 </svelte:head>
 
 <main
@@ -13,11 +13,11 @@
 >
 	<div class="space-y-3">
 		<p class="text-sm font-semibold uppercase tracking-wide text-accent">
-			Mistake Ledger
+			AlgoDrill
 		</p>
 		<h1 class="text-3xl font-semibold text-ink">Sign in</h1>
 		<p class="text-muted">
-			Review recurring mistakes before the next problem starts.
+			Review recurring traps before the next coding problem starts.
 		</p>
 	</div>
 
