@@ -25,14 +25,24 @@ npm run build
 ## Deploy
 
 1. Copy `.env.example` to `.env` and fill every secret.
-2. Set `BETTER_AUTH_URL=https://your-hostname` and `SITE_HOST=your-hostname`.
-3. Point DNS for `SITE_HOST` at the server.
-4. Ensure ports 80 and 443 are open for Caddy.
-5. Run `docker compose up -d --build`.
-6. Open `https://$SITE_HOST/setup`, enter `SETUP_TOKEN`, and create the owner account.
-7. Confirm health with `curl https://$SITE_HOST/api/health`.
+2. Set `BETTER_AUTH_URL=https://your-hostname`.
+3. Point DNS for that hostname at the VPS.
+4. Ensure the shared Docker network exists:
+   ```bash
+   docker network create caddy_net
+   ```
+5. Add this block to the VPS Caddyfile:
+   ```caddy
+   your-hostname {
+           reverse_proxy algodrill-app:3000
+   }
+   ```
+6. Reload Caddy on the VPS.
+7. Run `docker compose up -d --build`.
+8. Open `https://your-hostname/setup`, enter `SETUP_TOKEN`, and create the owner account.
+9. Confirm health with `curl https://your-hostname/api/health`.
 
-The app container runs `npm run db:migrate` before `node build`, uses one replica, and stores SQLite under the `app-data` volume mounted at `/data`.
+The app container runs `npm run db:migrate` before `node build`, uses one replica, joins the external `caddy_net` Docker network as `algodrill-app`, and stores SQLite under the `app-data` volume mounted at `/data`.
 
 ## Hosting Checklist
 
@@ -49,7 +59,7 @@ The app container runs `npm run db:migrate` before `node build`, uses one replic
   docker compose config
   docker compose up -d --build
   docker compose ps
-  curl https://$SITE_HOST/api/health
+  curl https://your-hostname/api/health
   ```
 
 ## Migrations And Rollback
@@ -74,7 +84,7 @@ docker compose exec litestream litestream snapshots -config /etc/litestream.yml 
    docker compose run --rm litestream restore -config /etc/litestream.yml -o /data/algodrill.sqlite /data/algodrill.sqlite
    ```
 3. Start the app: `docker compose up -d app`.
-4. Check `https://$SITE_HOST/api/health` and inspect recent sessions.
+4. Check `https://your-hostname/api/health` and inspect recent sessions.
 
 ## Operations Notes
 
