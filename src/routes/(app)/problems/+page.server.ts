@@ -3,7 +3,10 @@ import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db/client';
 import { requireUser } from '$lib/server/guards';
 import { listProblems } from '$lib/server/services/catalog';
-import { createProblem } from '$lib/server/services/problems';
+import {
+	createProblem,
+	fillMissingLeetCodeDetails
+} from '$lib/server/services/problems';
 import {
 	getNeetCodeConfig,
 	requireConfiguredImportUser,
@@ -40,6 +43,22 @@ export const actions: Actions = {
 		}
 
 		return { message: 'Problem saved.' };
+	},
+	fillDetails: async ({ locals }) => {
+		const { filled, missing } = await fillMissingLeetCodeDetails(
+			db,
+			requireUser(locals).id
+		);
+		if (filled === 0)
+			return fail(502, {
+				message: 'LeetCode did not return details. Try again later.'
+			});
+		return {
+			message:
+				missing === 0
+					? `Filled details for ${filled} problem${filled === 1 ? '' : 's'}.`
+					: `Filled ${filled}; ${missing} still missing.`
+		};
 	},
 	sync: async ({ locals }) => {
 		const user = requireUser(locals);
