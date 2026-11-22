@@ -1,4 +1,10 @@
-import { fail, redirect, type Actions } from '@sveltejs/kit';
+import {
+	fail,
+	isHttpError,
+	isRedirect,
+	redirect,
+	type Actions
+} from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db/client';
 import { requireUser } from '$lib/server/guards';
@@ -32,7 +38,7 @@ export const actions: Actions = {
 			);
 			throw redirect(303, `/sessions/${sessionId}`);
 		} catch (error) {
-			if (error && typeof error === 'object' && 'status' in error) throw error;
+			if (isRedirect(error) || isHttpError(error)) throw error;
 			if (error instanceof DailyPlanError) {
 				return fail(error.status, { message: error.message });
 			}

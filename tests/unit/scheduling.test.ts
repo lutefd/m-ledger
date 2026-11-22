@@ -13,4 +13,10 @@ describe('redo scheduling', () => {
 	])('maps confidence %i to the expected redo date', (confidence, expected) => {
 		expect(suggestRedoDate(confidence, completedAt)).toBe(expected);
 	});
+
+	it('anchors a Date to the America/Sao_Paulo calendar day', () => {
+		// 23:30 on June 10 in Sao Paulo is already June 11 UTC.
+		const lateEvening = new Date('2026-06-11T02:30:00.000Z');
+		expect(suggestRedoDate(1, lateEvening)).toBe('2026-06-11');
+	});
 });
