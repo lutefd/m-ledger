@@ -9,7 +9,7 @@ import {
 	mistakes,
 	problems
 } from '$lib/server/db/schema';
-import { dateOnly, isoNow } from '$lib/utils/dates';
+import { isoNow, localDateOnly } from '$lib/utils/dates';
 
 export type MistakeCandidate = {
 	id: string;
@@ -165,7 +165,9 @@ export async function getBriefingPreview(
 	}
 
 	const redos = [...latestByProblem.values()]
-		.filter((redo) => redo.redoDate !== null && redo.redoDate <= dateOnly(now))
+		.filter(
+			(redo) => redo.redoDate !== null && redo.redoDate <= localDateOnly(now)
+		)
 		.sort(
 			(a, b) =>
 				(a.redoDate ?? '').localeCompare(b.redoDate ?? '') ||

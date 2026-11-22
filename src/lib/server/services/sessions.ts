@@ -25,10 +25,17 @@ export type RecapAttemptInput = RecapInput[number];
 export async function createStudySession(
 	db: Db,
 	userId: string,
-	problemIds: string[]
+	problemIds: string[],
+	options: { reuseOpen?: boolean } = {}
 ) {
+	const reuseOpen = options.reuseOpen ?? true;
 	const openSession = await getUnfinishedSession(db, userId);
-	if (openSession) return openSession.id;
+	if (openSession) {
+		if (reuseOpen) return openSession.id;
+		throw new Error(
+			'Finish or abandon the open session before starting a new one.'
+		);
+	}
 	if (problemIds.length === 0) throw new Error('Choose at least one problem.');
 	const owned = await db
 		.select({ id: problems.id })
@@ -679,10 +686,20 @@ export async function saveRecap(
 	});
 }
 
-export async function getTodaySnapshot(db: Db, userId: string) {
+export async function getTodaySnapshot(
+	db: Db,
+	userId: string,
+	now = new Date()
+) {
 	const recent = await listRecentSessions(db, userId, 5);
-	const preview = await getBriefingPreview(db, userId);
-	return { recent, mistakes: preview.mistakes, redos: preview.redos };
+	const preview = await getBriefingPreview(db, userId, now);
+	const openSession = await getOpenSessionSummary(db, userId);
+	return {
+		recent,
+		mistakes: preview.mistakes,
+		redos: preview.redos,
+		openSession
+	};
 }
 
 export async function getProblemHistory(

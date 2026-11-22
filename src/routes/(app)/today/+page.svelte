@@ -1,5 +1,7 @@
 <script lang="ts">
-	let { data } = $props();
+	import { enhance } from '$app/forms';
+
+	let { data, form } = $props();
 </script>
 
 <svelte:head>
@@ -14,10 +16,78 @@
 		<h1 class="text-3xl font-semibold">
 			Drill the patterns that decide the next solve.
 		</h1>
-		<a
-			class="inline-flex rounded bg-accent px-4 py-2 font-semibold text-white"
-			href="/sessions/new">New session</a
-		>
+		{#if data.openSession}
+			<a
+				class="inline-flex rounded bg-accent px-4 py-2 font-semibold text-white"
+				href={`/sessions/${data.openSession.id}`}>Resume open session</a
+			>
+		{:else}
+			<a
+				class="inline-flex rounded bg-accent px-4 py-2 font-semibold text-white"
+				href="/sessions/new">New session</a
+			>
+		{/if}
+	</section>
+
+	<section class="rounded-lg border border-line bg-white/55 p-5">
+		<div class="flex flex-wrap items-start justify-between gap-3">
+			<div>
+				<h2 class="text-xl font-semibold">Bob's plan · {data.planDate}</h2>
+				<p class="mt-1 text-sm text-muted">
+					External coach queue for today. AlgoDrill still tracks outcomes and
+					manual redos separately.
+				</p>
+			</div>
+			{#if data.plan && !data.plan.started && !data.openSession}
+				<form method="POST" action="?/startPlan" use:enhance>
+					<button
+						class="rounded bg-accent px-4 py-2 font-semibold text-white"
+						type="submit">Start from plan</button
+					>
+				</form>
+			{:else if data.plan?.startedSessionId}
+				<a
+					class="inline-flex rounded border border-line px-4 py-2 font-semibold"
+					href={`/sessions/${data.plan.startedSessionId}`}>Open plan session</a
+				>
+			{/if}
+		</div>
+
+		{#if form?.message}
+			<p
+				class="mt-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+			>
+				{form.message}
+			</p>
+		{/if}
+
+		{#if !data.plan}
+			<p class="mt-4 text-muted">No coach plan for today yet.</p>
+		{:else}
+			<ol class="mt-4 space-y-3">
+				{#each data.plan.items as item (item.id)}
+					<li class="border-t border-line pt-3">
+						<p class="font-semibold">
+							{item.position}.
+							<a
+								class="underline"
+								href={item.url}
+								target="_blank"
+								rel="noreferrer noopener">{item.title}</a
+							>
+						</p>
+						<p class="text-sm text-muted">
+							{item.dueReason} · {item.source}
+						</p>
+					</li>
+				{/each}
+			</ol>
+			{#if data.plan.started}
+				<p class="mt-4 text-sm text-muted">
+					This plan has already been started.
+				</p>
+			{/if}
+		{/if}
 	</section>
 
 	<section class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
