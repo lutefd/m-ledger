@@ -8,69 +8,56 @@
 </svelte:head>
 
 <main
-	class="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-12"
+	class="mx-auto flex min-h-screen w-full max-w-sm flex-col justify-center px-6 py-12"
 >
-	<div class="space-y-3">
-		<p class="text-sm font-semibold uppercase tracking-wide text-accent">
-			Private setup
-		</p>
-		<h1 class="text-3xl font-semibold text-ink">Create the owner account</h1>
-		<p class="text-muted">
-			This page disappears after the first account exists.
-		</p>
+	<div
+		class="mb-8 flex items-center gap-2 text-[0.95rem] font-semibold tracking-tight"
+	>
+		<span
+			class="grid size-7 shrink-0 place-items-center rounded-md bg-fg text-sm font-bold text-bg"
+			aria-hidden="true">A</span
+		>
+		<span>AlgoDrill</span>
 	</div>
 
-	<form
-		method="POST"
-		use:enhance={enhanceWithToast}
-		class="mt-8 space-y-5 rounded-lg border border-line bg-white/60 p-6 shadow-sm"
-	>
-		<label class="block space-y-2">
-			<span class="text-sm font-medium">Setup token</span>
-			<input
-				name="token"
-				type="password"
-				class="w-full rounded border border-line bg-white px-3 py-2"
-				required
-			/>
-		</label>
+	<h1 class="page-title">Create the owner account</h1>
+	<p class="mt-1.5 text-sm text-muted">
+		This page disappears after the first account exists.
+	</p>
 
-		<label class="block space-y-2">
-			<span class="text-sm font-medium">Name</span>
-			<input
-				name="name"
-				class="w-full rounded border border-line bg-white px-3 py-2"
-				autocomplete="name"
-				required
-			/>
+	<form method="POST" use:enhance={enhanceWithToast} class="mt-8 space-y-4">
+		<label class="block">
+			<span class="field-label">Setup token</span>
+			<input class="input" name="token" type="password" required />
 		</label>
-
-		<label class="block space-y-2">
-			<span class="text-sm font-medium">Email</span>
+		<label class="block">
+			<span class="field-label">Name</span>
+			<input class="input" name="name" autocomplete="name" required />
+		</label>
+		<label class="block">
+			<span class="field-label">Email</span>
 			<input
+				class="input"
 				name="email"
 				type="email"
-				class="w-full rounded border border-line bg-white px-3 py-2"
 				autocomplete="email"
 				required
 			/>
 		</label>
-
-		<label class="block space-y-2">
-			<span class="text-sm font-medium">Password</span>
+		<label class="block">
+			<span class="field-label">Password</span>
 			<input
+				class="input"
 				name="password"
 				type="password"
-				class="w-full rounded border border-line bg-white px-3 py-2"
 				autocomplete="new-password"
 				minlength="12"
 				required
 			/>
 		</label>
 
-		<button
-			class="w-full rounded bg-accent px-4 py-2 font-semibold text-white hover:bg-accent-strong"
-			type="submit">Create account</button
+		<button class="btn btn-primary btn-lg w-full" type="submit"
+			>Create account</button
 		>
 	</form>
 </main>

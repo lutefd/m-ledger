@@ -23,45 +23,57 @@
 	<title>History | AlgoDrill</title>
 </svelte:head>
 
-<main class="mx-auto max-w-6xl px-6 py-8">
-	<h1 class="text-3xl font-semibold">History</h1>
-	<section class="mt-6">
-		<h2 class="text-2xl font-semibold">Activity</h2>
-		<p class="mt-2 text-muted">
-			Timed attempts and accepted NeetCode solves stay separate, but matching
-			activity is shown together.
-		</p>
-		{#if data.history.length === 0}
-			<p class="mt-4 rounded-lg border border-line bg-white/55 p-5 text-muted">
-				No activity yet.
+<main class="page">
+	<header class="page-head">
+		<div class="min-w-0">
+			<h1 class="page-title">History</h1>
+			<p class="page-sub mt-1">
+				Timed attempts and accepted NeetCode solves stay separate, but matching
+				activity is shown together.
 			</p>
+		</div>
+	</header>
+
+	<section>
+		<div class="section-label">
+			<h2>Activity</h2>
+			<span class="tag">{data.history.length}</span>
+		</div>
+		{#if data.history.length === 0}
+			<p class="empty">No activity yet.</p>
 		{:else}
-			<div
-				class="mt-4 divide-y divide-line rounded-lg border border-line bg-white/60"
-			>
+			<div class="panel rows">
 				{#each data.history as item (item.id)}
-					<article class="p-5">
-						<div class="flex flex-wrap items-baseline justify-between gap-2">
+					<article class="p-4">
+						<div
+							class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+						>
 							<a
-								class="font-semibold underline"
+								class="link text-sm font-medium"
 								href={`/problems/${item.problemId}`}
 							>
 								{item.problemTitle}
 							</a>
-							<span class="text-sm text-muted"
-								>{new Date(item.activityAt).toLocaleString()}</span
-							>
+							<span class="font-mono text-xs text-faint tabular-nums">
+								{new Date(item.activityAt).toLocaleString()}
+							</span>
 						</div>
 
 						{#if item.externalSolve}
-							<div class="mt-4 rounded-md border border-line bg-white/70 p-4">
-								<p class="font-semibold">Accepted NeetCode solve</p>
-								<p class="mt-1 text-sm text-muted">
-									{item.externalSolve.language} · {item.externalSolve
-										.submissionPath}
-								</p>
+							<div
+								class="mt-3 flex flex-wrap items-start justify-between gap-3 border-t border-line-soft pt-3 sm:flex-nowrap sm:items-center"
+							>
+								<div class="min-w-0 flex-1">
+									<p class="text-xs font-medium text-muted">
+										Accepted NeetCode solve
+									</p>
+									<p class="mt-0.5 text-sm">{item.externalSolve.language}</p>
+									<p class="tag mt-0.5 break-all">
+										{item.externalSolve.submissionPath}
+									</p>
+								</div>
 								<a
-									class="mt-3 inline-block rounded border border-line px-3 py-2 text-sm"
+									class="btn btn-secondary shrink-0"
 									href={item.externalSolve.sourceCodeUrl}
 									target="_blank"
 									rel="noreferrer noopener"
@@ -72,16 +84,29 @@
 						{/if}
 
 						{#if item.timedAttempt}
-							<div class="mt-3 rounded-md border border-line bg-white/70 p-4">
-								<p class="font-semibold">Timed attempt</p>
-								<p class="mt-1 text-sm text-muted">
-									{formatDuration(item.timedAttempt.elapsedMs)} ·
-									{item.timedAttempt.outcome ?? 'Incomplete'} · confidence
-									{item.timedAttempt.confidence ?? '-'}
-								</p>
+							<div class="mt-3 border-t border-line-soft pt-3">
+								<div
+									class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
+								>
+									<p class="text-xs font-medium text-muted">Timed attempt</p>
+									<p
+										class="flex flex-wrap items-baseline gap-x-2 font-mono text-xs text-muted tabular-nums"
+									>
+										<span>{formatDuration(item.timedAttempt.elapsedMs)}</span>
+										<span class="text-faint" aria-hidden="true">·</span>
+										<span class="font-sans text-fg">
+											{item.timedAttempt.outcome ?? 'Incomplete'}
+										</span>
+										<span class="text-faint" aria-hidden="true">·</span>
+										<span>confidence {item.timedAttempt.confidence ?? '-'}</span
+										>
+									</p>
+								</div>
 								{#if item.timedAttempt.notesDocument}
 									<div class="mt-3">
-										<p class="mb-2 text-sm font-medium">Recap notes</p>
+										<p class="mb-1.5 text-xs font-medium text-muted">
+											Recap notes
+										</p>
 										<RichTextEditor
 											document={parseDocument(item.timedAttempt.notesDocument)}
 											editable={false}
@@ -96,28 +121,39 @@
 			</div>
 		{/if}
 		{#if !data.history.some((item) => item.externalSolve)}
-			<p class="mt-4 text-sm text-muted">
+			<p class="mt-3 text-xs text-muted">
 				No external solves yet. Sync NeetCode history from the Problems page.
 			</p>
 		{/if}
 	</section>
 
-	<section class="mt-10">
-		<h2 class="text-2xl font-semibold">Timed sessions</h2>
+	<section>
+		<div class="section-label">
+			<h2>Timed sessions</h2>
+			<span class="tag">{data.sessions.length}</span>
+		</div>
 		{#if data.sessions.length === 0}
-			<p class="mt-3 text-muted">No sessions yet.</p>
+			<p class="empty">No sessions yet.</p>
 		{:else}
-			<div
-				class="mt-6 divide-y divide-line rounded-lg border border-line bg-white/60"
-			>
+			<div class="rows">
 				{#each data.sessions as session (session.id)}
-					<article class="flex items-center justify-between gap-3 p-4">
-						<a class="min-w-0 flex-1" href={`/sessions/${session.id}`}>
-							<span>{session.startedAt.slice(0, 10)}</span>
-							<span class="ml-3 text-sm text-muted">{session.status}</span>
-							<span class="ml-3 text-sm text-muted"
-								>{formatDuration(session.elapsedMs)}</span
+					<article class="flex items-center justify-between gap-3 py-2.5">
+						<a
+							class="group flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-0.5 text-sm"
+							href={`/sessions/${session.id}`}
+						>
+							<span
+								class="font-mono text-xs text-fg decoration-line underline-offset-4 group-hover:underline group-hover:decoration-fg"
 							>
+								{session.startedAt.slice(0, 10)}
+							</span>
+							{#if session.name}
+								<span class="font-medium">{session.name}</span>
+							{/if}
+							<span class="text-xs text-muted">{session.status}</span>
+							<span class="font-mono text-xs text-faint tabular-nums">
+								{formatDuration(session.elapsedMs)}
+							</span>
 						</a>
 						<form
 							method="POST"
@@ -127,11 +163,11 @@
 						>
 							<input type="hidden" name="sessionId" value={session.id} />
 							<button
-								class="rounded border border-red-200 p-2 text-red-700"
+								class="btn btn-ghost btn-icon hover:bg-danger-soft hover:text-danger"
 								type="submit"
 								aria-label={`Delete session from ${session.startedAt.slice(0, 10)}`}
 							>
-								<Trash2 size={16} aria-hidden="true" />
+								<Trash2 size={15} aria-hidden="true" />
 							</button>
 						</form>
 					</article>

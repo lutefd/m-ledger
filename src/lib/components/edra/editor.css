@@ -1,4 +1,28 @@
-/* Base TipTap Editor Styles with Light/Dark Theme Support */
+/* Base TipTap editor styles, mapped to the app's semantic theme tokens */
+.rich-editor,
+.tiptap,
+.ProseMirror,
+.edra-editor,
+.code-wrapper,
+.drag-handle {
+	--foreground: var(--fg);
+	--muted-foreground: var(--muted);
+	--border-color: var(--line);
+	--border-color-hover: var(--faint);
+	--blockquote-color: var(--muted);
+	--blockquote-border: var(--line);
+	--task-completed-color: var(--faint);
+	--highlight-color: var(--live-soft);
+	--highlight-border: var(--live);
+	--table-border: var(--line);
+	--table-bg-selected: var(--hover);
+	--table-bg-hover: var(--hover);
+	--search-result-bg: var(--live-soft);
+	--search-result-current-bg: var(--live-soft);
+	--codeblock-bg: var(--code-bg);
+	--destructive: var(--danger);
+}
+
 .edra-editor .tiptap.ProseMirror {
 	margin-inline: auto;
 }
@@ -103,7 +127,7 @@
 }
 
 .tiptap code {
-	font-family: 'Fira Code Variable', monospace;
+	font-family: var(--font-mono);
 }
 
 /* Inline Code */
@@ -111,7 +135,7 @@
 	padding: 0.2rem 0.3rem;
 	font-size: 0.9rem;
 	font-weight: 500;
-	color: var(--color-primary);
+	color: var(--fg);
 	background-color: var(--code-bg);
 	border-radius: 0.25rem;
 }
@@ -168,6 +192,7 @@
 
 .tiptap ul[data-type='taskList'] input[type='checkbox'] {
 	cursor: pointer;
+	accent-color: var(--live);
 }
 
 .tiptap ul[data-type='taskList'] ul[data-type='taskList'] {
@@ -177,51 +202,6 @@
 ul[data-type='taskList'] li[data-checked='true'] div {
 	color: var(--task-completed-color);
 	text-decoration: line-through;
-}
-
-.edra-editor input[type='checkbox'] {
-	position: relative;
-	top: 0rem;
-	display: grid;
-	place-content: center;
-	width: 1.25rem;
-	height: 1.25rem;
-	margin: 0;
-	-webkit-appearance: none;
-	appearance: none;
-	cursor: pointer;
-	background-color: transparent;
-	border: 1px solid var(--border-color);
-	border-radius: 0.25rem;
-}
-
-.edra-editor input[type='checkbox']:hover {
-	background-color: color-mix(in srgb, var(--muted) 50%, transparent);
-}
-
-.edra-editor input[type='checkbox']:active {
-	background-color: var(--muted);
-}
-
-.edra-editor input[type='checkbox']::before {
-	width: 0.75rem;
-	height: 0.75rem;
-	padding: 0.25rem;
-	color: var(--secondary);
-	content: '';
-	box-shadow: inset 1em 1em;
-	clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
-	transform: scale(0);
-	transform-origin: center;
-	transition: 200ms transform ease-in-out;
-}
-
-.edra-editor input[type='checkbox']:checked {
-	background-color: var(--secondary-foreground);
-}
-
-.edra-editor input[type='checkbox']:checked::before {
-	transform: scale(1);
 }
 
 /* Color Swatches */
@@ -237,7 +217,7 @@ ul[data-type='taskList'] li[data-checked='true'] div {
 	margin-bottom: 0.15rem;
 	vertical-align: middle;
 	content: ' ';
-	background-color: var(--color);
+	background-color: var(--swatch, var(--faint));
 	border: 1px solid var(--border-color);
 	border-radius: 0.25rem;
 }
@@ -334,14 +314,14 @@ ul[data-type='taskList'] li[data-checked='true'] div {
 	bottom: -2px;
 	width: 2px;
 	cursor: col-resize;
-	background-color: var(--primary);
+	background-color: var(--live);
 }
 
 .ProseMirror table .selectedCell {
 	/* Stronger visual, avoids collapse issues */
 	z-index: 1;
 	/* Stronger visual, avoids collapse issues */
-	outline: 1px solid var(--primary);
+	outline: 1px solid var(--live);
 	background-color: var(--table-bg-selected);
 }
 
@@ -386,7 +366,7 @@ ul[data-type='taskList'] li[data-checked='true'] div {
 .ProseMirror table .grip-column.selected {
 	background-color: var(--table-bg-hover);
 	border-color: var(--table-border);
-	box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+	box-shadow: none;
 }
 
 .ProseMirror table .grip-row {
@@ -412,7 +392,7 @@ ul[data-type='taskList'] li[data-checked='true'] div {
 .ProseMirror table .grip-row.selected {
 	background-color: var(--table-bg-hover);
 	border-color: var(--table-border);
-	box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+	box-shadow: none;
 }
 
 /* Cell grip — appears on cell hover or when selected */
@@ -451,10 +431,10 @@ ul[data-type='taskList'] li[data-checked='true'] div {
 	justify-content: center;
 	color: var(--foreground);
 	cursor: pointer;
-	background-color: var(--muted);
+	background-color: var(--surface);
 	border: var(--table-border-size) solid var(--table-border);
 	border-radius: 0.5rem;
-	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+	box-shadow: none;
 	opacity: 0;
 	transform: scale(0.95);
 	transition:
@@ -502,17 +482,17 @@ ul[data-type='taskList'] li[data-checked='true'] div {
 /* Focus states for accessibility */
 .ProseMirror .add-column-btn:focus-visible,
 .ProseMirror .add-row-btn:focus-visible {
-	outline: var(--table-focus-ring) solid var(--primary);
+	outline: var(--table-focus-ring) solid var(--live);
 	outline-offset: 2px;
 }
 
 .tiptap .search-result {
-	color: black;
+	color: var(--fg);
 	background-color: var(--search-result-bg);
 }
 
 .tiptap .search-result-current {
-	color: black;
+	color: var(--fg);
 	background-color: var(--search-result-current-bg);
 }
 
@@ -583,7 +563,7 @@ ul[data-type='taskList'] li[data-checked='true'] div {
 .tiptap .tiptap-mathematics-render.block-math-error {
 	color: var(--destructive);
 	background: var(--code-bg);
-	border: 1px solid darkred;
+	border: 1px solid var(--danger);
 }
 
 /* Drag Handle Styling */

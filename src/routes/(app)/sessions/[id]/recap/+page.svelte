@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ChevronRight } from '@lucide/svelte';
 	import { enhance } from '$app/forms';
 	import RichTextEditor from '$lib/components/RichTextEditor.svelte';
 	import type { RichTextDocument } from '$lib/server/validation/rich-text';
@@ -42,17 +43,24 @@
 	<title>Session recap | AlgoDrill</title>
 </svelte:head>
 
-<main class="mx-auto max-w-5xl px-6 py-8">
-	<h1 class="text-3xl font-semibold">Session recap</h1>
-	<p class="mt-3 text-muted">
-		Record the outcome, confidence, mistakes, patterns, notes, and redo date for
-		every activated problem.
-	</p>
-	<section class="mt-6 rounded-lg border border-line bg-white/60 p-4">
+<main class="page max-w-4xl">
+	<header class="page-head">
+		<div>
+			{#if data.session.name}
+				<p class="text-sm font-medium">{data.session.name}</p>
+			{/if}
+			<p class="page-sub">
+				Record the outcome, confidence, mistakes, patterns, notes, and redo date
+				for every activated problem.
+			</p>
+			<h1 class="page-title">Session recap</h1>
+		</div>
+	</header>
+	<section class="space-y-3">
 		<div class="flex flex-wrap gap-2">
 			<button
 				type="button"
-				class="rounded border border-line px-3 py-2 text-sm font-semibold"
+				class="btn btn-ghost"
 				onclick={() => {
 					showMistakeForm = !showMistakeForm;
 					showPatternForm = false;
@@ -60,7 +68,7 @@
 			>
 			<button
 				type="button"
-				class="rounded border border-line px-3 py-2 text-sm font-semibold"
+				class="btn btn-ghost"
 				onclick={() => {
 					showPatternForm = !showPatternForm;
 					showMistakeForm = false;
@@ -72,23 +80,11 @@
 				method="POST"
 				action="?/createMistake"
 				use:enhance={enhanceWithToast}
-				class="mt-4 grid gap-2 md:grid-cols-[1fr_1fr_auto]"
+				class="grid gap-2 md:grid-cols-[1fr_1fr_auto]"
 			>
-				<input
-					name="name"
-					class="rounded border border-line bg-white px-3 py-2 text-sm"
-					placeholder="Name"
-					required
-				/>
-				<input
-					name="guardrail"
-					class="rounded border border-line bg-white px-3 py-2 text-sm"
-					placeholder="Guardrail"
-				/>
-				<button
-					class="rounded bg-ink px-3 py-2 text-sm font-semibold text-white"
-					type="submit">Create</button
-				>
+				<input name="name" class="input" placeholder="Name" required />
+				<input name="guardrail" class="input" placeholder="Guardrail" />
+				<button class="btn btn-secondary" type="submit">Create</button>
 			</form>
 		{/if}
 		{#if showPatternForm}
@@ -96,23 +92,15 @@
 				method="POST"
 				action="?/createPattern"
 				use:enhance={enhanceWithToast}
-				class="mt-4 grid gap-2 md:grid-cols-[1fr_1fr_auto]"
+				class="grid gap-2 md:grid-cols-[1fr_1fr_auto]"
 			>
-				<input
-					name="name"
-					class="rounded border border-line bg-white px-3 py-2 text-sm"
-					placeholder="Name"
-					required
-				/>
+				<input name="name" class="input" placeholder="Name" required />
 				<input
 					name="recognitionTrigger"
-					class="rounded border border-line bg-white px-3 py-2 text-sm"
+					class="input"
 					placeholder="Recognition trigger"
 				/>
-				<button
-					class="rounded bg-ink px-3 py-2 text-sm font-semibold text-white"
-					type="submit">Create</button
-				>
+				<button class="btn btn-secondary" type="submit">Create</button>
 			</form>
 		{/if}
 	</section>
@@ -120,19 +108,26 @@
 		method="POST"
 		action="?/save"
 		use:enhance={enhanceWithToast}
-		class="mt-6 space-y-5"
+		class="space-y-5"
 	>
 		{#if attempts.length === 0}
-			<div class="rounded-lg border border-line bg-white/60 p-5 text-muted">
-				No activated attempts yet.
-			</div>
+			<p class="empty">No activated attempts yet.</p>
 		{:else}
 			{#each attempts as attempt (attempt.attemptId)}
 				{@const attemptId = attempt.attemptId}
-				<details class="rounded-lg border border-line bg-white/60 p-5" open>
-					<summary class="cursor-pointer text-xl font-semibold">
-						{attempt.title}
-						<span class="ml-2 text-sm font-normal text-muted">
+				<details class="group panel space-y-5 p-4 sm:p-5" open>
+					<summary
+						class="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden"
+					>
+						<ChevronRight
+							size={16}
+							class="shrink-0 text-faint transition-transform group-open:rotate-90"
+							aria-hidden="true"
+						/>
+						<h2 class="flex-1 text-lg font-semibold tracking-tight">
+							{attempt.title}
+						</h2>
+						<span class="shrink-0 font-mono text-sm text-muted">
 							{formatDuration(attempt.elapsedMs)}
 						</span>
 					</summary>
@@ -146,12 +141,12 @@
 								? JSON.stringify(recapDocuments[attemptId])
 								: ''}
 						/>
-						<div class="mt-4 grid gap-4 md:grid-cols-2">
-							<label class="block space-y-2">
-								<span class="text-sm font-medium">Outcome</span>
+						<div class="grid gap-4 md:grid-cols-3">
+							<label class="block space-y-1.5">
+								<span class="field-label">Outcome</span>
 								<select
 									name={`outcome:${attempt.attemptId}`}
-									class="w-full rounded border border-line bg-white px-3 py-2"
+									class="input"
 									required
 								>
 									<option value="">Choose</option>
@@ -163,11 +158,11 @@
 									<option value="stuck">Stuck</option>
 								</select>
 							</label>
-							<label class="block space-y-2">
-								<span class="text-sm font-medium">Confidence</span>
+							<label class="block space-y-1.5">
+								<span class="field-label">Confidence</span>
 								<select
 									name={`confidence:${attempt.attemptId}`}
-									class="w-full rounded border border-line bg-white px-3 py-2"
+									class="input"
 									required
 									onchange={(event) =>
 										attempt.attemptId &&
@@ -179,32 +174,25 @@
 									{/each}
 								</select>
 							</label>
-						</div>
-						<label class="mt-4 block space-y-2">
-							<span class="text-sm font-medium">Redo date</span>
-							<input
-								id={`redoDate:${attempt.attemptId}`}
-								name={`redoDate:${attempt.attemptId}`}
-								type="date"
-								class="w-full rounded border border-line bg-white px-3 py-2"
-							/>
-						</label>
-						<div class="mt-4 space-y-2">
-							<span class="text-sm font-medium">Notes</span>
-							<RichTextEditor
-								document={recapDocuments[attemptId]}
-								variant="recap"
-								onChange={(document) => setRecapDocument(attemptId, document)}
-							/>
+							<label class="block space-y-1.5">
+								<span class="field-label">Redo date</span>
+								<input
+									id={`redoDate:${attempt.attemptId}`}
+									name={`redoDate:${attempt.attemptId}`}
+									type="date"
+									class="input font-mono"
+								/>
+							</label>
 						</div>
 					{/if}
-					<div class="mt-4 grid gap-4 md:grid-cols-2">
+					<div class="grid gap-4 md:grid-cols-2">
 						<fieldset class="space-y-2">
-							<legend class="text-sm font-medium">Mistakes</legend>
+							<legend class="field-label mb-1">Mistakes</legend>
 							{#each data.mistakes as mistake (mistake.id)}
-								<label class="flex gap-2 text-sm"
+								<label class="flex items-center gap-2 text-sm"
 									><input
 										type="checkbox"
+										class="size-4 accent-[var(--live)]"
 										name={`mistakes:${attempt.attemptId}`}
 										value={mistake.id}
 									/>{mistake.name}</label
@@ -212,11 +200,12 @@
 							{/each}
 						</fieldset>
 						<fieldset class="space-y-2">
-							<legend class="text-sm font-medium">Patterns</legend>
+							<legend class="field-label mb-1">Patterns</legend>
 							{#each data.patterns as pattern (pattern.id)}
-								<label class="flex gap-2 text-sm"
+								<label class="flex items-center gap-2 text-sm"
 									><input
 										type="checkbox"
+										class="size-4 accent-[var(--live)]"
 										name={`patterns:${attempt.attemptId}`}
 										value={pattern.id}
 									/>{pattern.name}</label
@@ -224,12 +213,19 @@
 							{/each}
 						</fieldset>
 					</div>
+					{#if attemptId}
+						<div class="space-y-1.5">
+							<span class="field-label">Notes</span>
+							<RichTextEditor
+								document={recapDocuments[attemptId]}
+								variant="recap"
+								onChange={(document) => setRecapDocument(attemptId, document)}
+							/>
+						</div>
+					{/if}
 				</details>
 			{/each}
-			<button
-				class="rounded bg-accent px-4 py-2 font-semibold text-white"
-				type="submit">Save recap</button
-			>
+			<button class="btn btn-primary btn-lg" type="submit">Save recap</button>
 		{/if}
 	</form>
 </main>

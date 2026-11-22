@@ -10,38 +10,50 @@
 	<title>New session | AlgoDrill</title>
 </svelte:head>
 
-<main class="mx-auto max-w-3xl px-6 py-8">
-	<h1 class="text-3xl font-semibold">New session</h1>
-	<p class="mt-3 text-muted">Choose problems for today’s queue.</p>
-	<form method="POST" use:enhance={enhanceWithToast} class="mt-6 space-y-4">
+<main class="page max-w-3xl">
+	<header class="page-head">
+		<div>
+			<p class="page-sub">Choose problems for today’s queue.</p>
+			<h1 class="page-title">New session</h1>
+		</div>
+	</header>
+	<form method="POST" use:enhance={enhanceWithToast} class="space-y-5">
 		{#if data.problems.length === 0}
-			<div class="rounded-lg border border-line bg-white/60 p-5 text-muted">
-				Add a problem before starting a session.
-			</div>
+			<p class="empty">Add a problem before starting a session.</p>
 		{:else}
-			<div class="space-y-2">
+			<label class="block max-w-md space-y-1.5">
+				<span class="field-label"
+					>Name <span class="text-faint">(optional)</span></span
+				>
+				<input
+					name="name"
+					class="input"
+					maxlength="80"
+					placeholder="Sliding window drills"
+					autocomplete="off"
+				/>
+			</label>
+			<div class="panel rows">
 				{#each data.problems as problem (problem.id)}
-					<label
-						class="flex items-center gap-3 rounded-lg border border-line bg-white/60 p-4"
-					>
-						<input type="checkbox" name="problemIds" value={problem.id} />
-						<span>
-							<span class="flex items-center gap-2">
-								<span class="font-semibold">{problem.title}</span>
-								<span
-									class="rounded-full bg-accent/10 px-2 py-1 text-xs font-semibold text-accent"
-								>
-									{problemProviderLabel(problem.provider)}
-								</span>
-							</span>
-							<span class="text-sm text-muted">{problem.slug}</span>
+					<label class="row cursor-pointer hover:bg-hover">
+						<input
+							type="checkbox"
+							name="problemIds"
+							value={problem.id}
+							class="size-4 accent-[var(--live)]"
+						/>
+						<span class="min-w-0 flex-1">
+							<span class="font-medium">{problem.title}</span>
+							<span class="tag ml-2">{problem.slug}</span>
+						</span>
+						<span class="tag shrink-0">
+							{problemProviderLabel(problem.provider)}
 						</span>
 					</label>
 				{/each}
 			</div>
-			<button
-				class="rounded bg-accent px-4 py-2 font-semibold text-white"
-				type="submit">Create briefing</button
+			<button class="btn btn-primary btn-lg" type="submit"
+				>Create briefing</button
 			>
 		{/if}
 	</form>

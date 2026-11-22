@@ -10,50 +10,73 @@
 	<title>Patterns | AlgoDrill</title>
 </svelte:head>
 
-<main class="mx-auto grid max-w-6xl gap-8 px-6 py-8 lg:grid-cols-[380px_1fr]">
-	<section>
-		<h1 class="text-3xl font-semibold">Patterns</h1>
-		<p class="mt-3 text-muted">
-			Name patterns and the trigger that should make them recognizable.
-		</p>
-		<form
-			method="POST"
-			use:enhance={enhanceWithToast}
-			class="mt-6 space-y-4 rounded-lg border border-line bg-white/60 p-5"
-		>
-			<input
-				name="name"
-				class="w-full rounded border border-line bg-white px-3 py-2"
-				placeholder="Sliding window"
-				required
-			/>
-			<textarea
-				name="recognitionTrigger"
-				class="min-h-24 w-full rounded border border-line bg-white px-3 py-2"
-				placeholder="When should this pattern come to mind?"></textarea>
-			<button
-				class="inline-flex items-center gap-2 rounded bg-accent px-4 py-2 font-semibold text-white"
-				type="submit"
-			>
-				<Plus size={18} aria-hidden="true" />
-				Add pattern
-			</button>
-		</form>
-	</section>
-	<section class="space-y-3">
-		{#if data.patterns.length === 0}
-			<div class="rounded-lg border border-line bg-white/55 p-6 text-muted">
-				No patterns yet.
+<main class="page">
+	<header class="page-head">
+		<div class="min-w-0">
+			<h1 class="page-title">Patterns</h1>
+			<p class="page-sub mt-1">
+				Name patterns and the trigger that should make them recognizable.
+			</p>
+		</div>
+	</header>
+
+	<div class="grid items-start gap-8 lg:grid-cols-[296px_1fr]">
+		<section>
+			<div class="section-label">
+				<h2>Add pattern</h2>
 			</div>
-		{:else}
-			{#each data.patterns as pattern (pattern.id)}
-				<article class="rounded-lg border border-line bg-white/60 p-5">
-					<h2 class="text-xl font-semibold">{pattern.name}</h2>
-					{#if pattern.recognitionTrigger}
-						<p class="mt-3 text-muted">{pattern.recognitionTrigger}</p>
-					{/if}
-				</article>
-			{/each}
-		{/if}
-	</section>
+			<form
+				method="POST"
+				use:enhance={enhanceWithToast}
+				class="panel space-y-3 p-4"
+			>
+				<label class="block space-y-1">
+					<span class="field-label">Name</span>
+					<input
+						name="name"
+						class="input"
+						placeholder="Sliding window"
+						required
+					/>
+				</label>
+				<label class="block space-y-1">
+					<span class="field-label">Recognition trigger</span>
+					<textarea
+						name="recognitionTrigger"
+						rows="3"
+						class="input"
+						placeholder="When should this pattern come to mind?"></textarea>
+				</label>
+				<button class="btn btn-primary w-full" type="submit">
+					<Plus size={15} aria-hidden="true" />
+					Add pattern
+				</button>
+			</form>
+		</section>
+
+		<section>
+			<div class="section-label">
+				<h2>All patterns</h2>
+				<span class="tag">{data.patterns.length}</span>
+			</div>
+			{#if data.patterns.length === 0}
+				<p class="empty">No patterns yet.</p>
+			{:else}
+				<div class="panel rows">
+					{#each data.patterns as pattern (pattern.id)}
+						<article class="row">
+							<div class="min-w-0 flex-1">
+								<h3 class="text-sm font-medium">{pattern.name}</h3>
+								{#if pattern.recognitionTrigger}
+									<p class="mt-0.5 text-xs text-muted">
+										{pattern.recognitionTrigger}
+									</p>
+								{/if}
+							</div>
+						</article>
+					{/each}
+				</div>
+			{/if}
+		</section>
+	</div>
 </main>

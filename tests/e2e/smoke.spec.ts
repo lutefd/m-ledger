@@ -139,7 +139,11 @@ test('shows provider badges, external history, source links, and empty states', 
 	await expect(page).toHaveTitle('New session | AlgoDrill');
 	const problemId = problemHref!.split('/').pop();
 	await page.locator(`input[name="problemIds"][value="${problemId}"]`).check();
+	await page.getByLabel('Name').fill('Hash map warmup');
 	await page.getByRole('button', { name: 'Create briefing' }).click();
+	await expect(
+		page.getByRole('heading', { name: 'Hash map warmup', exact: true })
+	).toBeVisible();
 	await page.waitForURL(/\/sessions\/(?!new$)[^/?]+$/);
 	await page.getByRole('button', { name: 'Acknowledge and start' }).click();
 	await expect(page.getByLabel('Problem URL')).toBeVisible();
@@ -205,9 +209,7 @@ test('shows provider badges, external history, source links, and empty states', 
 	await expect(
 		page.getByRole('heading', { name: 'Session recap', exact: true })
 	).toHaveCount(0);
-	await expect(
-		page.getByRole('heading', { name: 'completed', exact: true })
-	).toHaveCount(1);
+	await expect(page.getByText('completed', { exact: true })).toHaveCount(1);
 	await expect(page.getByText('Recap solution notes.')).toBeVisible();
 	await expect(page.getByText('Session brief notes.')).toBeVisible();
 

@@ -14,38 +14,82 @@
 	<title>{data.problem.title} | Problems | AlgoDrill</title>
 </svelte:head>
 
-<main class="mx-auto max-w-4xl px-6 py-8">
-	<div class="flex flex-wrap items-center gap-3">
-		<h1 class="text-3xl font-semibold">{data.problem.title}</h1>
-		<span
-			class="rounded-full bg-accent/10 px-2 py-1 text-xs font-semibold text-accent"
-		>
-			{problemProviderLabel(data.problem.provider)}
-		</span>
-	</div>
-	<p class="mt-2 text-muted">
-		{data.problem.slug} · {formatDuration(data.totalMs)}
-	</p>
-	<section class="mt-6">
-		<h2 class="text-xl font-semibold">Timed attempts</h2>
+<main class="page">
+	<header class="page-head">
+		<div class="min-w-0">
+			<div class="mb-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+				<span class="tag">{problemProviderLabel(data.problem.provider)}</span>
+				<span class="tag" aria-hidden="true">/</span>
+				<span class="tag break-all">{data.problem.slug}</span>
+				{#if data.problem.difficulty}
+					<span class="tag" aria-hidden="true">·</span>
+					<span class="tag capitalize">{data.problem.difficulty}</span>
+				{/if}
+			</div>
+			<h1 class="page-title">{data.problem.title}</h1>
+		</div>
+		<div class="flex flex-wrap items-center gap-3">
+			<div
+				class="flex items-center gap-2 font-mono text-xs text-muted tabular-nums"
+			>
+				<span>{formatDuration(data.totalMs)}</span>
+				<span class="text-faint" aria-hidden="true">·</span>
+				<span>
+					{data.history.length}
+					{data.history.length === 1 ? 'attempt' : 'attempts'}
+				</span>
+			</div>
+			{#if data.problem.url}
+				<a
+					class="btn btn-secondary"
+					href={data.problem.url}
+					target="_blank"
+					rel="noreferrer noopener"
+				>
+					Open problem
+				</a>
+			{/if}
+		</div>
+	</header>
+
+	<section>
+		<div class="section-label">
+			<h2>Timed attempts</h2>
+			<span class="tag">{data.history.length}</span>
+		</div>
 		{#if data.history.length === 0}
-			<p class="mt-3 rounded-lg border border-line bg-white/55 p-5 text-muted">
-				No timed attempts for this problem yet.
-			</p>
+			<p class="empty">No timed attempts for this problem yet.</p>
 		{:else}
-			<div class="mt-3 space-y-3">
+			<div class="panel rows">
 				{#each data.history as attempt (attempt.attemptId)}
-					<article class="rounded-lg border border-line bg-white/60 p-5">
-						<p class="font-semibold">
-							{attempt.outcome ?? 'Incomplete'}
-							<span class="text-sm text-muted"
-								>confidence {attempt.confidence ?? '-'}</span
+					<article class="p-4">
+						<div
+							class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+						>
+							<div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+								<p class="text-sm font-medium">
+									{attempt.outcome ?? 'Incomplete'}
+								</p>
+								<span class="font-mono text-xs text-muted">
+									confidence {attempt.confidence ?? '-'}
+								</span>
+							</div>
+							<div
+								class="flex flex-wrap items-baseline gap-x-2 font-mono text-xs text-muted tabular-nums"
 							>
-						</p>
-						<p class="mt-1 text-sm text-muted">
-							{attempt.completedAt ?? attempt.redoDate ?? 'Not completed'} ·
-							{formatDuration(Math.round(Number(attempt.elapsedMs ?? 0)))}
-						</p>
+								<span
+									>{attempt.completedAt ??
+										attempt.redoDate ??
+										'Not completed'}</span
+								>
+								<span class="text-faint" aria-hidden="true">·</span>
+								<span
+									>{formatDuration(
+										Math.round(Number(attempt.elapsedMs ?? 0))
+									)}</span
+								>
+							</div>
+						</div>
 						{#if attempt.notesDocument}
 							<div class="mt-3">
 								<RichTextEditor
@@ -56,22 +100,24 @@
 							</div>
 						{/if}
 						{#if attempt.relatedExternalSolves.length > 0}
-							<div class="mt-3 border-t border-line pt-3 text-sm">
-								<p class="font-semibold">Related external solve</p>
-								{#each attempt.relatedExternalSolves as solve (solve.id)}
-									<p class="mt-1 text-muted">
-										{solve.language} · {new Date(
-											solve.submittedAt
-										).toLocaleString()}
-										·
-										<a
-											class="underline"
-											href={solve.sourceCodeUrl}
-											target="_blank"
-											rel="noreferrer noopener">View source</a
-										>
-									</p>
-								{/each}
+							<div class="mt-3 border-t border-line-soft pt-3 text-xs">
+								<p class="font-medium text-muted">Related external solve</p>
+								<div class="mt-1.5 space-y-1">
+									{#each attempt.relatedExternalSolves as solve (solve.id)}
+										<p class="flex flex-wrap items-baseline gap-x-2 text-muted">
+											<span class="font-medium text-fg">{solve.language}</span>
+											<span class="font-mono text-faint">
+												{new Date(solve.submittedAt).toLocaleString()}
+											</span>
+											<a
+												class="link text-fg"
+												href={solve.sourceCodeUrl}
+												target="_blank"
+												rel="noreferrer noopener">View source</a
+											>
+										</p>
+									{/each}
+								</div>
 							</div>
 						{/if}
 					</article>
@@ -80,26 +126,29 @@
 		{/if}
 	</section>
 
-	<section class="mt-10">
-		<h2 class="text-xl font-semibold">External solves</h2>
+	<section>
+		<div class="section-label">
+			<h2>External solves</h2>
+			<span class="tag">{data.externalSolves.length}</span>
+		</div>
 		{#if data.externalSolves.length === 0}
-			<p class="mt-3 rounded-lg border border-line bg-white/55 p-5 text-muted">
-				No external solves for this problem yet.
-			</p>
+			<p class="empty">No external solves for this problem yet.</p>
 		{:else}
-			<div class="mt-3 space-y-3">
+			<div class="panel rows">
 				{#each data.externalSolves as solve (solve.id)}
 					<article
-						class="flex items-center justify-between gap-4 rounded-lg border border-line bg-white/60 p-5"
+						class="row flex-wrap items-start justify-between gap-3 py-3 sm:flex-nowrap sm:items-center"
 					>
-						<div>
-							<p class="font-semibold">{solve.language}</p>
-							<p class="mt-1 text-sm text-muted">
-								{new Date(solve.submittedAt).toLocaleString()} ·
-								{solve.submissionPath}
-							</p>
+						<div class="min-w-0 flex-1">
+							<div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+								<p class="text-sm font-medium">{solve.language}</p>
+								<span class="font-mono text-xs text-muted">
+									{new Date(solve.submittedAt).toLocaleString()}
+								</span>
+							</div>
+							<p class="tag mt-0.5 break-all">{solve.submissionPath}</p>
 							{#if solve.linkedAttempt}
-								<p class="mt-2 text-sm text-muted">
+								<p class="mt-1 font-mono text-xs text-muted tabular-nums">
 									Linked timed attempt:
 									{solve.linkedAttempt.completedAt ??
 										solve.linkedAttempt.createdAt} ·
@@ -110,7 +159,7 @@
 							{/if}
 						</div>
 						<a
-							class="shrink-0 rounded border border-line px-3 py-2 text-sm"
+							class="btn btn-secondary shrink-0"
 							href={solve.sourceCodeUrl}
 							target="_blank"
 							rel="noreferrer noopener"

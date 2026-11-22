@@ -170,6 +170,9 @@
 					class="rounded-lg border border-line bg-surface p-3 collapsed:hidden"
 					aria-label="Open session"
 				>
+					{#if session.name}
+						<p class="truncate text-sm font-medium">{session.name}</p>
+					{/if}
 					<p class="truncate text-xs text-muted">{sessionLabel}</p>
 					{#if session.status === 'active'}
 						<p
@@ -178,14 +181,14 @@
 							{formatClock(barElapsed)}
 						</p>
 					{/if}
-					<div class="mt-2.5 flex gap-1.5">
+					<div class="mt-2.5 flex flex-col gap-1.5">
 						{#if !onSessionPage}
-							<a class="btn btn-primary flex-1" href={sessionHref}>
+							<a class="btn btn-primary" href={sessionHref}>
 								<Play size={14} aria-hidden="true" />
 								{sessionAction}
 							</a>
 						{/if}
-						{@render pauseForm('btn btn-secondary flex-1', false)}
+						{@render pauseForm('btn btn-secondary', false)}
 					</div>
 				</section>
 				<!-- Collapsed: vertical clock -->

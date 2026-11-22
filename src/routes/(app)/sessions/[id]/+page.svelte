@@ -1,8 +1,16 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { ExternalLink, Pause, Play, Plus, Trash2 } from '@lucide/svelte';
+	import type { SubmitFunction } from '@sveltejs/kit';
+	import {
+		ExternalLink,
+		Pause,
+		Pencil,
+		Play,
+		Plus,
+		Trash2
+	} from '@lucide/svelte';
 	import ToastOnMount from '$lib/components/ToastOnMount.svelte';
-	import { formatDuration } from '$lib/utils/time';
+	import { formatClock, formatDuration } from '$lib/utils/time';
 	import { enhanceWithToast } from '$lib/utils/forms';
 	import { problemProviderLabel } from '$lib/utils/providers';
 	import RichTextEditor from '$lib/components/RichTextEditor.svelte';
@@ -23,6 +31,15 @@
 	let resubmittingAfterSave = false;
 	let showMistakeForm = $state(false);
 	let showPatternForm = $state(false);
+	let renaming = $state(false);
+
+	const enhanceRename: SubmitFunction = async (input) => {
+		const afterSubmit = await enhanceWithToast(input);
+		return async (options) => {
+			if (afterSubmit) await afterSubmit(options);
+			if (options.result.type === 'success') renaming = false;
+		};
+	};
 
 	function parseDocument(value: string | null): RichTextDocument | null {
 		return value ? JSON.parse(value) : null;
@@ -137,72 +154,127 @@
 	</title>
 </svelte:head>
 
-<main class="mx-auto max-w-6xl space-y-6 px-6 py-8">
+<main class="page">
 	<ToastOnMount message={data.message} />
-	<div class="flex flex-wrap items-center justify-between gap-4">
-		<div>
-			<p class="text-sm font-semibold uppercase tracking-wide text-accent">
-				Session
-			</p>
-			<h1 class="text-3xl font-semibold capitalize">{data.session.status}</h1>
+	<header class="space-y-1">
+		<p class="flex items-center gap-2 text-sm text-muted">
+			{#if data.session.status === 'active'}
+				<span class="size-1.5 rounded-full bg-live" aria-hidden="true"></span>
+			{/if}
+			<span class="capitalize">{data.session.status}</span>
+		</p>
+		<div class="flex flex-wrap items-end justify-between gap-4">
+			{#if renaming}
+				<form
+					method="POST"
+					action="?/rename"
+					class="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+					use:enhance={enhanceRename}
+				>
+					<input
+						name="name"
+						class="input max-w-md text-base"
+						value={data.session.name ?? ''}
+						placeholder="Untitled session"
+						aria-label="Session name"
+						maxlength="80"
+						onkeydown={(event) => {
+							if (event.key === 'Escape') renaming = false;
+						}}
+						{@attach (node) => node.focus()}
+					/>
+					<button class="btn btn-primary" type="submit">Save name</button>
+					<button
+						class="btn btn-ghost"
+						type="button"
+						onclick={() => (renaming = false)}>Cancel</button
+					>
+				</form>
+			{:else}
+				<div class="flex min-w-0 items-center gap-1">
+					<h1
+						class={['page-title truncate', !data.session.name && 'text-muted']}
+					>
+						{data.session.name ?? 'Untitled session'}
+					</h1>
+					<button
+						class="btn btn-ghost btn-icon"
+						type="button"
+						aria-label="Rename session"
+						title="Rename session"
+						onclick={() => (renaming = true)}
+					>
+						<Pencil size={15} aria-hidden="true" />
+					</button>
+				</div>
+			{/if}
+			<div
+				class="font-mono text-[2.5rem] leading-none font-medium tabular-nums sm:text-[3.5rem] {openSegment
+					? 'text-live'
+					: 'text-fg'}"
+			>
+				{formatClock(renderedElapsed)}
+			</div>
 		</div>
-		<div class="text-3xl font-semibold tabular-nums">
-			{formatDuration(renderedElapsed)}
-		</div>
-	</div>
+	</header>
 	{#if data.session.status === 'briefing'}
-		<section class="grid gap-4 lg:grid-cols-2">
-			<div class="rounded-lg border border-line bg-white/60 p-5">
-				<h2 class="text-xl font-semibold">Recurring mistakes</h2>
+		<section class="grid gap-8 lg:grid-cols-2">
+			<div>
+				<h2 class="section-label">Recurring mistakes</h2>
 				{#if data.briefingMistakes.length === 0}
-					<p class="mt-3 text-muted">No recurring mistakes qualified yet.</p>
+					<p class="empty">No recurring mistakes qualified yet.</p>
 				{:else}
-					{#each data.briefingMistakes as mistake (mistake.rank)}
-						<article class="mt-4 border-t border-line pt-4">
-							<h3 class="font-semibold">{mistake.name}</h3>
-							<p class="text-sm text-muted">
-								{mistake.guardrail ?? 'No guardrail recorded.'}
-							</p>
-							<p class="mt-1 text-xs text-muted">
-								{mistake.occurrenceCount} occurrences
-							</p>
-						</article>
-					{/each}
+					<div class="rows">
+						{#each data.briefingMistakes as mistake (mistake.rank)}
+							<article class="flex items-start justify-between gap-3 py-2.5">
+								<div class="min-w-0">
+									<h3 class="font-medium">{mistake.name}</h3>
+									<p class="text-sm text-muted">
+										{mistake.guardrail ?? 'No guardrail recorded.'}
+									</p>
+								</div>
+								<span class="shrink-0 font-mono text-sm text-live"
+									>×{mistake.occurrenceCount}</span
+								>
+							</article>
+						{/each}
+					</div>
 				{/if}
 			</div>
-			<div class="rounded-lg border border-line bg-white/60 p-5">
-				<h2 class="text-xl font-semibold">Due redos</h2>
+			<div>
+				<h2 class="section-label">Due redos</h2>
 				{#if data.briefingRedos.length === 0}
-					<p class="mt-3 text-muted">No redos due.</p>
+					<p class="empty">No redos due.</p>
 				{:else}
-					{#each data.briefingRedos as redo (redo.rank)}
-						<p class="mt-3">
-							{redo.title}
-							<span class="text-sm text-muted">{redo.dueDate}</span>
-						</p>
-					{/each}
+					<div class="rows">
+						{#each data.briefingRedos as redo (redo.rank)}
+							<p class="flex items-baseline justify-between gap-3 py-2.5">
+								<span class="font-medium">{redo.title}</span>
+								<span class="font-mono text-sm text-muted">{redo.dueDate}</span>
+							</p>
+						{/each}
+					</div>
 				{/if}
 			</div>
 		</section>
 		<form method="POST" action="?/acknowledge" use:enhance={enhanceWithToast}>
-			<button
-				class="rounded bg-accent px-4 py-2 font-semibold text-white"
-				type="submit">Acknowledge and start</button
+			<button class="btn btn-primary btn-lg" type="submit"
+				>Acknowledge and start</button
 			>
 		</form>
 	{:else}
-		<section class="rounded-lg border border-line bg-white/60 p-5">
-			<div class="flex flex-wrap items-start justify-between gap-3">
-				<h2 class="text-xl font-semibold">Queue</h2>
+		<section>
+			<div class="mb-3 flex flex-wrap items-end justify-between gap-3">
+				<h2 class="section-label !mb-0">Queue</h2>
 				<form
 					method="POST"
 					action="?/addProblem"
 					use:enhance={enhanceWithToast}
-					class="flex flex-wrap gap-2"
+					class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row"
 				>
 					<select
 						name="problemId"
-						class="w-52 rounded border border-line bg-white px-3 py-2 text-sm"
+						class="input sm:w-48"
 						aria-label="Existing problem"
 					>
 						<option value="">Existing problem</option>
@@ -214,38 +286,38 @@
 					</select>
 					<input
 						name="url"
-						class="w-72 rounded border border-line bg-white px-3 py-2 text-sm"
+						class="input sm:w-64"
 						placeholder="https://.../problem"
 						aria-label="Problem URL"
 					/>
-					<button
-						class="inline-flex items-center gap-2 rounded bg-accent px-3 py-2 text-sm font-semibold text-white"
-						type="submit"
-					>
+					<button class="btn btn-secondary py-2" type="submit">
 						<Plus size={16} aria-hidden="true" />Add problem
 					</button>
 				</form>
 			</div>
-			<div class="mt-4 space-y-3">
+			<div class="panel rows">
 				{#each data.queue as item (item.problemId)}
 					<article
-						class="flex flex-wrap items-start justify-between gap-3 border-t border-line pt-3"
+						class="row flex-wrap items-start {openSegment?.attemptId ===
+							item.attemptId && item.attemptId
+							? 'row-live'
+							: ''}"
 					>
 						<div class="min-w-0 flex-1">
 							<div class="flex flex-wrap items-center gap-2">
-								<h3 class="font-semibold">{item.title}</h3>
-								<span
-									class="rounded-full bg-accent/10 px-2 py-1 text-xs font-semibold text-accent"
-								>
+								<h3 class="font-medium">{item.title}</h3>
+								<span class="tag">
 									{problemProviderLabel(item.provider)}
 								</span>
 							</div>
 							<p class="text-sm text-muted">
 								{item.outcome ?? 'Not recapped'}
 								{#if item.attemptId}
-									· {formatDuration(
-										elapsedForAttempt(item.attemptId, renderedElapsed)
-									)}
+									· <span class="font-mono"
+										>{formatDuration(
+											elapsedForAttempt(item.attemptId, renderedElapsed)
+										)}</span
+									>
 								{/if}
 							</p>
 							{#if item.notesDocument}
@@ -261,7 +333,7 @@
 						</div>
 						<div class="flex gap-2">
 							<a
-								class="rounded border border-line px-3 py-2 text-sm"
+								class="btn btn-ghost btn-icon"
 								href={item.url}
 								target="_blank"
 								rel="noreferrer noopener"
@@ -277,10 +349,12 @@
 							>
 								<input type="hidden" name="problemId" value={item.problemId} />
 								<button
-									class="inline-flex items-center gap-2 rounded bg-accent px-3 py-2 text-sm font-semibold text-white"
+									class="btn {openSegment?.attemptId === item.attemptId
+										? 'btn-primary'
+										: 'btn-secondary'}"
 									type="submit"
 								>
-									<Play size={16} aria-hidden="true" />
+									<Play size={14} aria-hidden="true" />
 									{openSegment?.attemptId === item.attemptId
 										? 'Active'
 										: 'Work'}
@@ -299,9 +373,8 @@
 					use:enhance={enhanceWithToast}
 					onsubmit={flushNotebookBeforeSubmit}
 				>
-					<button
-						class="inline-flex items-center gap-2 rounded border border-line px-4 py-2"
-						type="submit"><Pause size={16} />Stop work</button
+					<button class="btn btn-secondary btn-lg" type="submit"
+						><Pause size={16} />Stop work</button
 					>
 				</form>
 			{/if}
@@ -310,21 +383,20 @@
 				action="?/complete"
 				onsubmit={flushNotebookBeforeSubmit}
 			>
-				<button
-					class="rounded bg-ink px-4 py-2 font-semibold text-white"
-					type="submit">Finish session / recap</button
+				<button class="btn btn-primary btn-lg" type="submit"
+					>Finish session / recap</button
 				>
 			</form>
-			<p class="text-sm text-muted">
+			<p class="min-w-0 flex-1 basis-64 text-sm text-muted">
 				Use Work to time a problem. Stop work closes the current timer; recap is
 				where outcomes are saved.
 			</p>
 		</div>
-		<section class="rounded-lg border border-line bg-white/60 p-4">
+		<section class="space-y-3">
 			<div class="flex flex-wrap gap-2">
 				<button
 					type="button"
-					class="rounded border border-line px-3 py-2 text-sm font-semibold"
+					class="btn btn-ghost"
 					onclick={() => {
 						showMistakeForm = !showMistakeForm;
 						showPatternForm = false;
@@ -332,7 +404,7 @@
 				>
 				<button
 					type="button"
-					class="rounded border border-line px-3 py-2 text-sm font-semibold"
+					class="btn btn-ghost"
 					onclick={() => {
 						showPatternForm = !showPatternForm;
 						showMistakeForm = false;
@@ -344,23 +416,11 @@
 					method="POST"
 					action="?/createMistake"
 					use:enhance={enhanceWithToast}
-					class="mt-4 grid gap-2 md:grid-cols-[1fr_1fr_auto]"
+					class="grid gap-2 md:grid-cols-[1fr_1fr_auto]"
 				>
-					<input
-						name="name"
-						class="rounded border border-line bg-white px-3 py-2 text-sm"
-						placeholder="Name"
-						required
-					/>
-					<input
-						name="guardrail"
-						class="rounded border border-line bg-white px-3 py-2 text-sm"
-						placeholder="Guardrail"
-					/>
-					<button
-						class="rounded bg-ink px-3 py-2 text-sm font-semibold text-white"
-						type="submit">Create</button
-					>
+					<input name="name" class="input" placeholder="Name" required />
+					<input name="guardrail" class="input" placeholder="Guardrail" />
+					<button class="btn btn-secondary" type="submit">Create</button>
 				</form>
 			{/if}
 			{#if showPatternForm}
@@ -368,35 +428,27 @@
 					method="POST"
 					action="?/createPattern"
 					use:enhance={enhanceWithToast}
-					class="mt-4 grid gap-2 md:grid-cols-[1fr_1fr_auto]"
+					class="grid gap-2 md:grid-cols-[1fr_1fr_auto]"
 				>
-					<input
-						name="name"
-						class="rounded border border-line bg-white px-3 py-2 text-sm"
-						placeholder="Name"
-						required
-					/>
+					<input name="name" class="input" placeholder="Name" required />
 					<input
 						name="recognitionTrigger"
-						class="rounded border border-line bg-white px-3 py-2 text-sm"
+						class="input"
 						placeholder="Recognition trigger"
 					/>
-					<button
-						class="rounded bg-ink px-3 py-2 text-sm font-semibold text-white"
-						type="submit">Create</button
-					>
+					<button class="btn btn-secondary" type="submit">Create</button>
 				</form>
 			{/if}
 		</section>
 	{/if}
 
-	<section class="rounded-lg border border-line bg-white/60 p-5">
-		<div class="flex flex-wrap items-start justify-between gap-3">
+	<section>
+		<div class="mb-3 flex flex-wrap items-start justify-between gap-3">
 			<div>
-				<h2 class="text-xl font-semibold">
+				<h2 class="font-medium">
 					{data.session.status === 'completed' ? 'Session brief' : 'Notebook'}
 				</h2>
-				<p class="mt-1 text-sm text-muted">
+				<p class="text-sm text-muted">
 					{data.session.status === 'completed'
 						? 'Notes captured while working. This is read-only after completion.'
 						: saveState === 'saving'
@@ -407,32 +459,23 @@
 				</p>
 			</div>
 			<form method="POST" action="?/delete" onsubmit={confirmDelete}>
-				<button
-					class="inline-flex items-center gap-2 rounded border border-red-200 px-3 py-2 text-sm font-semibold text-red-700"
-					type="submit"
-				>
-					<Trash2 size={16} aria-hidden="true" />
+				<button class="btn btn-danger" type="submit">
+					<Trash2 size={14} aria-hidden="true" />
 					Delete
 				</button>
 			</form>
 		</div>
-		<div class="mt-4">
-			{#if data.session.status === 'completed' && !notebook}
-				<p
-					class="rounded border border-line bg-white/60 p-4 text-sm text-muted"
-				>
-					No session brief was recorded.
-				</p>
-			{:else}
-				<RichTextEditor
-					document={notebook}
-					variant="notebook"
-					editable={data.session.status !== 'completed'}
-					onChange={data.session.status === 'completed'
-						? undefined
-						: scheduleNotebookSave}
-				/>
-			{/if}
-		</div>
+		{#if data.session.status === 'completed' && !notebook}
+			<p class="empty">No session brief was recorded.</p>
+		{:else}
+			<RichTextEditor
+				document={notebook}
+				variant="notebook"
+				editable={data.session.status !== 'completed'}
+				onChange={data.session.status === 'completed'
+					? undefined
+					: scheduleNotebookSave}
+			/>
+		{/if}
 	</section>
 </main>

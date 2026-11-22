@@ -11,124 +11,116 @@
 	<title>Problems | AlgoDrill</title>
 </svelte:head>
 
-<main class="mx-auto grid max-w-6xl gap-8 px-6 py-8 lg:grid-cols-[380px_1fr]">
-	<section>
-		<h1 class="text-3xl font-semibold">Problems</h1>
-		<p class="mt-3 text-muted">
-			Add problems from LeetCode, NeetCode, HackerRank, or another HTTPS
-			practice site.
-		</p>
-
-		<form
-			method="POST"
-			action="?/sync"
-			use:enhance={enhanceWithToast}
-			class="mt-6"
-		>
-			<button
-				class="rounded border border-line bg-white/70 px-4 py-2 font-semibold hover:bg-white"
-				type="submit"
-			>
+<main class="page">
+	<header class="page-head">
+		<div class="min-w-0">
+			<h1 class="page-title">Problems</h1>
+			<p class="page-sub mt-1">
+				Add problems from LeetCode, NeetCode, HackerRank, or another HTTPS
+				practice site.
+			</p>
+		</div>
+		<form method="POST" action="?/sync" use:enhance={enhanceWithToast}>
+			<button class="btn btn-secondary" type="submit">
 				Sync NeetCode history
 			</button>
 		</form>
+	</header>
 
-		<form
-			method="POST"
-			action="?/save"
-			use:enhance={enhanceWithToast}
-			class="mt-6 space-y-4 rounded-lg border border-line bg-white/60 p-5"
-		>
-			<label class="block space-y-2">
-				<span class="text-sm font-medium">Problem URL</span>
-				<input
-					name="url"
-					type="url"
-					class="w-full rounded border border-line bg-white px-3 py-2"
-					required
-				/>
-			</label>
-			<label class="block space-y-2">
-				<span class="text-sm font-medium">Title override</span>
-				<input
-					name="title"
-					class="w-full rounded border border-line bg-white px-3 py-2"
-				/>
-			</label>
-			<label class="block space-y-2">
-				<span class="text-sm font-medium">Difficulty</span>
-				<select
-					name="difficulty"
-					class="w-full rounded border border-line bg-white px-3 py-2"
-				>
-					<option value="">Unset</option>
-					<option value="easy">Easy</option>
-					<option value="medium">Medium</option>
-					<option value="hard">Hard</option>
-				</select>
-			</label>
-			<label class="block space-y-2">
-				<span class="text-sm font-medium">Topics</span>
-				<input
-					name="topics"
-					class="w-full rounded border border-line bg-white px-3 py-2"
-					placeholder="arrays, two pointers"
-				/>
-			</label>
-			<button
-				class="inline-flex items-center gap-2 rounded bg-accent px-4 py-2 font-semibold text-white hover:bg-accent-strong"
-				type="submit"
-			>
-				<Plus size={18} aria-hidden="true" />
-				Add problem
-			</button>
-		</form>
-	</section>
-
-	<section
-		class="min-h-0 space-y-3 overflow-y-auto lg:max-h-[calc(100vh-7rem)] lg:pr-2"
-		aria-label="Problem list"
-	>
-		{#if data.problems.length === 0}
-			<div class="rounded-lg border border-line bg-white/55 p-6 text-muted">
-				No problems yet.
+	<div class="grid items-start gap-8 lg:grid-cols-[296px_1fr]">
+		<section>
+			<div class="section-label">
+				<h2>Add problem</h2>
 			</div>
-		{:else}
-			{#each data.problems as problem (problem.id)}
-				<article class="rounded-lg border border-line bg-white/60 p-5">
-					<div class="flex items-start justify-between gap-4">
-						<div>
-							<div class="flex flex-wrap items-center gap-2">
-								<h2 class="text-xl font-semibold">
-									<a class="hover:underline" href={`/problems/${problem.id}`}>
+			<form
+				method="POST"
+				action="?/save"
+				use:enhance={enhanceWithToast}
+				class="panel space-y-3 p-4"
+			>
+				<label class="block space-y-1">
+					<span class="field-label">Problem URL</span>
+					<input name="url" type="url" class="input" required />
+				</label>
+				<label class="block space-y-1">
+					<span class="field-label">Title override</span>
+					<input name="title" class="input" />
+				</label>
+				<label class="block space-y-1">
+					<span class="field-label">Difficulty</span>
+					<select name="difficulty" class="input">
+						<option value="">Unset</option>
+						<option value="easy">Easy</option>
+						<option value="medium">Medium</option>
+						<option value="hard">Hard</option>
+					</select>
+				</label>
+				<label class="block space-y-1">
+					<span class="field-label">Topics</span>
+					<input
+						name="topics"
+						class="input"
+						placeholder="arrays, two pointers"
+					/>
+				</label>
+				<button class="btn btn-primary w-full" type="submit">
+					<Plus size={15} aria-hidden="true" />
+					Add problem
+				</button>
+			</form>
+		</section>
+
+		<section
+			class="min-h-0 overflow-y-auto lg:max-h-[calc(100vh-11rem)]"
+			aria-label="Problem list"
+		>
+			<div class="section-label">
+				<h2>Library</h2>
+				<span class="tag">{data.problems.length}</span>
+			</div>
+			{#if data.problems.length === 0}
+				<p class="empty">No problems yet.</p>
+			{:else}
+				<div class="panel rows">
+					{#each data.problems as problem (problem.id)}
+						<article class="row">
+							<div class="min-w-0 flex-1">
+								<h3 class="text-sm font-medium">
+									<a class="link" href={`/problems/${problem.id}`}>
 										{problem.title}
 									</a>
-								</h2>
-								<span
-									class="rounded-full bg-accent/10 px-2 py-1 text-xs font-semibold text-accent"
+								</h3>
+								<div
+									class="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5"
 								>
-									{problemProviderLabel(problem.provider)}
-								</span>
+									<span class="tag"
+										>{problemProviderLabel(problem.provider)}</span
+									>
+									<span class="tag" aria-hidden="true">/</span>
+									<span class="tag break-all">{problem.slug}</span>
+								</div>
 							</div>
-							<p class="mt-1 text-sm text-muted">{problem.slug}</p>
-						</div>
-						<a
-							class="inline-flex items-center gap-2 rounded border border-line px-3 py-2 text-sm"
-							href={problem.url}
-							target="_blank"
-							rel="noreferrer noopener"
-						>
-							<ExternalLink size={16} aria-hidden="true" />
-							Open
-						</a>
-					</div>
-					{#if problem.difficulty}
-						<p class="mt-4 text-sm capitalize text-muted">
-							{problem.difficulty}
-						</p>
-					{/if}
-				</article>
-			{/each}
-		{/if}
-	</section>
+							<div class="ml-auto flex shrink-0 items-center gap-2">
+								{#if problem.difficulty}
+									<span class="text-xs capitalize text-muted">
+										{problem.difficulty}
+									</span>
+								{/if}
+								<a
+									class="btn btn-ghost btn-icon"
+									href={problem.url}
+									target="_blank"
+									rel="noreferrer noopener"
+									aria-label={`Open ${problem.title}`}
+									title="Open external"
+								>
+									<ExternalLink size={15} aria-hidden="true" />
+								</a>
+							</div>
+						</article>
+					{/each}
+				</div>
+			{/if}
+		</section>
+	</div>
 </main>
