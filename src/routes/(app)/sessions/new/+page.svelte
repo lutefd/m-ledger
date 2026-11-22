@@ -1,9 +1,20 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import ProblemFilters from '$lib/components/ProblemFilters.svelte';
 	import { enhanceWithToast } from '$lib/utils/forms';
+	import {
+		emptyProblemFilter,
+		matchesProblemFilter
+	} from '$lib/utils/problem-filter';
 	import { problemProviderLabel } from '$lib/utils/providers';
 
 	let { data } = $props();
+	let filter = $state(emptyProblemFilter());
+	let selected = $state<string[]>([]);
+	const visibleCount = $derived(
+		data.problems.filter((problem) => matchesProblemFilter(problem, filter))
+			.length
+	);
 </script>
 
 <svelte:head>
@@ -33,28 +44,46 @@
 					autocomplete="off"
 				/>
 			</label>
-			<div class="panel rows">
+			<ProblemFilters problems={data.problems} bind:filter />
+			{#if visibleCount === 0}
+				<p class="empty">No problems match these filters.</p>
+			{/if}
+			<div class={['panel rows', visibleCount === 0 && 'hidden']}>
 				{#each data.problems as problem (problem.id)}
-					<label class="row cursor-pointer hover:bg-hover">
+					<label
+						class="row cursor-pointer hover:bg-hover"
+						hidden={!matchesProblemFilter(problem, filter)}
+					>
 						<input
 							type="checkbox"
 							name="problemIds"
 							value={problem.id}
+							bind:group={selected}
 							class="size-4 accent-[var(--live)]"
 						/>
 						<span class="min-w-0 flex-1">
 							<span class="font-medium">{problem.title}</span>
 							<span class="tag ml-2">{problem.slug}</span>
 						</span>
+						{#if problem.difficulty}
+							<span class="shrink-0 text-xs text-muted capitalize"
+								>{problem.difficulty}</span
+							>
+						{/if}
 						<span class="tag shrink-0">
 							{problemProviderLabel(problem.provider)}
 						</span>
 					</label>
 				{/each}
 			</div>
-			<button class="btn btn-primary btn-lg" type="submit"
-				>Create briefing</button
-			>
+			<div class="flex items-center gap-3">
+				<button class="btn btn-primary btn-lg" type="submit"
+					>Create briefing</button
+				>
+				<span class="text-sm text-muted">
+					{selected.length} selected
+				</span>
+			</div>
 		{/if}
 	</form>
 </main>

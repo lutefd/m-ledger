@@ -1,8 +1,12 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import type { Db } from '$lib/server/db/client';
 import { problemTopics, problems, topics } from '$lib/server/db/schema';
 import { isoNow } from '$lib/utils/dates';
 import type { ProblemProvider } from '$lib/utils/providers';
+import {
+	lookupLeetCodeMetadata,
+	type LeetCodeMetadataLookup
+} from './leetcode-metadata';
 import { normalizeName, titleFromSlug } from './normalize';
 
 export type ProblemDifficulty = 'easy' | 'medium' | 'hard';
@@ -69,24 +73,54 @@ export async function createProblem(
 		title?: string;
 		difficulty?: ProblemDifficulty;
 		topicNames?: string[];
-	}
+	},
+	lookupMetadata: LeetCodeMetadataLookup = lookupLeetCodeMetadata
 ) {
 	const parsed = parseProblemUrl(input.url);
+	const explicitTitle = input.title?.trim() || undefined;
+	const explicitTopics = (input.topicNames ?? []).filter((name) =>
+		normalizeName(name)
+	);
 	const existing = await db.query.problems.findFirst({
 		where: and(eq(problems.userId, input.userId), eq(problems.url, parsed.url))
 	});
+
 	if (existing) {
-		const nextTitle = input.title?.trim();
-		if (nextTitle && nextTitle !== existing.title) {
-			const updatedAt = isoNow();
-			await db
-				.update(problems)
-				.set({ title: nextTitle, updatedAt })
-				.where(eq(problems.id, existing.id));
-			return { ...existing, title: nextTitle, updatedAt };
-		}
-		return existing;
+		const metadata =
+			parsed.provider === 'leetcode' && !existing.difficulty
+				? await lookupMetadata(parsed.slug)
+				: null;
+		const changes: Partial<typeof existing> = {};
+		const nextTitle =
+			explicitTitle ??
+			(existing.title === parsed.title ? metadata?.title : undefined);
+		if (nextTitle && nextTitle !== existing.title) changes.title = nextTitle;
+		const nextDifficulty = input.difficulty ?? metadata?.difficulty;
+		if (nextDifficulty && !existing.difficulty)
+			changes.difficulty = nextDifficulty;
+		if (Object.keys(changes).length === 0) return existing;
+
+		const updated = { ...existing, ...changes, updatedAt: isoNow() };
+		db.transaction((tx) => {
+			tx.update(problems)
+				.set({ ...changes, updatedAt: updated.updatedAt })
+				.where(eq(problems.id, existing.id))
+				.run();
+			const hasTopics = tx
+				.select({ topicId: problemTopics.topicId })
+				.from(problemTopics)
+				.where(eq(problemTopics.problemId, existing.id))
+				.get();
+			if (!hasTopics)
+				attachTopics(tx, input.userId, existing.id, metadata?.topics ?? []);
+		});
+		return updated;
 	}
+
+	const needsMetadata =
+		parsed.provider === 'leetcode' &&
+		(!explicitTitle || !input.difficulty || explicitTopics.length === 0);
+	const metadata = needsMetadata ? await lookupMetadata(parsed.slug) : null;
 
 	const now = isoNow();
 	const id = crypto.randomUUID();
@@ -96,45 +130,85 @@ export async function createProblem(
 		provider: parsed.provider,
 		url: parsed.url,
 		slug: parsed.slug,
-		title: input.title?.trim() || parsed.title,
-		difficulty: input.difficulty,
+		title: explicitTitle ?? metadata?.title ?? parsed.title,
+		difficulty: input.difficulty ?? metadata?.difficulty,
 		createdAt: now,
 		updatedAt: now
 	};
 
 	db.transaction((tx) => {
 		tx.insert(problems).values(problem).run();
-		for (const name of input.topicNames ?? []) {
-			const normalizedName = normalizeName(name);
-			if (!normalizedName) continue;
-			const topicId = crypto.randomUUID();
-			tx.insert(topics)
-				.values({
-					id: topicId,
-					userId: input.userId,
-					name: name.trim(),
-					normalizedName
-				})
-				.onConflictDoNothing()
-				.run();
-			const topic = tx.query.topics
-				.findFirst({
-					where: and(
-						eq(topics.userId, input.userId),
-						eq(topics.normalizedName, normalizedName)
-					)
-				})
-				.sync();
-			if (topic) {
-				tx.insert(problemTopics)
-					.values({ problemId: id, topicId: topic.id })
-					.onConflictDoNothing()
-					.run();
-			}
-		}
+		attachTopics(
+			tx,
+			input.userId,
+			id,
+			explicitTopics.length > 0 ? explicitTopics : (metadata?.topics ?? [])
+		);
 	});
 
 	return problem;
+}
+
+/** Re-runs the LeetCode lookup for problems still missing a difficulty. */
+export async function fillMissingLeetCodeDetails(
+	db: Db,
+	userId: string,
+	lookupMetadata: LeetCodeMetadataLookup = lookupLeetCodeMetadata
+) {
+	const pending = await db.query.problems.findMany({
+		where: and(
+			eq(problems.userId, userId),
+			eq(problems.provider, 'leetcode'),
+			isNull(problems.difficulty)
+		)
+	});
+	let filled = 0;
+	for (const problem of pending) {
+		const updated = await createProblem(
+			db,
+			{ userId, url: problem.url },
+			lookupMetadata
+		);
+		if (updated.difficulty) filled += 1;
+	}
+	return { filled, missing: pending.length - filled };
+}
+
+type Transaction = Parameters<Parameters<Db['transaction']>[0]>[0];
+
+function attachTopics(
+	tx: Transaction,
+	userId: string,
+	problemId: string,
+	names: string[]
+) {
+	for (const name of names) {
+		const normalizedName = normalizeName(name);
+		if (!normalizedName) continue;
+		tx.insert(topics)
+			.values({
+				id: crypto.randomUUID(),
+				userId,
+				name: name.trim(),
+				normalizedName
+			})
+			.onConflictDoNothing()
+			.run();
+		const topic = tx.query.topics
+			.findFirst({
+				where: and(
+					eq(topics.userId, userId),
+					eq(topics.normalizedName, normalizedName)
+				)
+			})
+			.sync();
+		if (topic) {
+			tx.insert(problemTopics)
+				.values({ problemId, topicId: topic.id })
+				.onConflictDoNothing()
+				.run();
+		}
+	}
 }
 
 function parseNeetCodeProblemUrl(url: URL) {
