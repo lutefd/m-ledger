@@ -9,6 +9,7 @@ const publicPaths = [
 	'/api/export/weekly',
 	'/api/daily-plans',
 	'/api/attempts',
+	'/api/sessions',
 	'/api/integrations/github/neetcode'
 ];
 

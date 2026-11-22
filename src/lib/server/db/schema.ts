@@ -230,6 +230,7 @@ export const studySessions = sqliteTable(
 		status: text('status', {
 			enum: ['briefing', 'active', 'paused', 'completed']
 		}).notNull(),
+		name: text('name'),
 		startedAt: iso('started_at').notNull(),
 		finishedAt: iso('finished_at'),
 		notes: text('notes'),
@@ -459,6 +460,7 @@ export const dailyPlans = sqliteTable(
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
 		planDate: text('plan_date').notNull(),
+		name: text('name'),
 		startedSessionId: text('started_session_id').references(
 			() => studySessions.id,
 			{ onDelete: 'set null' }

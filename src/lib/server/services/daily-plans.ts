@@ -28,6 +28,7 @@ export class DailyPlanError extends Error {
 export type DailyPlanView = {
 	id: string;
 	date: string;
+	name: string | null;
 	startedSessionId: string | null;
 	started: boolean;
 	createdAt: string;
@@ -82,6 +83,7 @@ export async function getDailyPlan(
 	return {
 		id: plan.id,
 		date: plan.planDate,
+		name: plan.name,
 		startedSessionId: plan.startedSessionId,
 		started: Boolean(plan.startedSessionId),
 		createdAt: plan.createdAt,
@@ -169,6 +171,7 @@ export async function upsertDailyPlan(
 			tx.delete(dailyPlanItems).where(eq(dailyPlanItems.planId, planId)).run();
 			tx.update(dailyPlans)
 				.set({
+					name: input.name,
 					updatedAt: now,
 					startedSessionId: null
 				})
@@ -180,6 +183,7 @@ export async function upsertDailyPlan(
 					id: planId,
 					userId,
 					planDate: input.date,
+					name: input.name,
 					createdAt: now,
 					updatedAt: now
 				})
@@ -244,7 +248,7 @@ export async function startSessionFromDailyPlan(
 		db,
 		userId,
 		plan.items.map((item) => item.problemId),
-		{ reuseOpen: false }
+		{ reuseOpen: false, name: plan.name }
 	);
 
 	await db

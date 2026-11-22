@@ -7,6 +7,7 @@ import {
 	mistakes,
 	patterns,
 	problems,
+	studySessions,
 	timerSegments
 } from '$lib/server/db/schema';
 import { addDaysToDateOnly, dateOnly, isoNow } from '$lib/utils/dates';
@@ -52,6 +53,7 @@ export async function getWeeklyExport(
 		.select({
 			attemptId: attempts.id,
 			sessionId: attempts.sessionId,
+			sessionName: studySessions.name,
 			problemId: problems.id,
 			title: problems.title,
 			slug: problems.slug,
@@ -66,6 +68,7 @@ export async function getWeeklyExport(
 		})
 		.from(attempts)
 		.innerJoin(problems, eq(problems.id, attempts.problemId))
+		.innerJoin(studySessions, eq(studySessions.id, attempts.sessionId))
 		.leftJoin(timerSegments, eq(timerSegments.attemptId, attempts.id))
 		.where(
 			and(
@@ -111,6 +114,7 @@ export async function getWeeklyExport(
 	const attemptsExport = attemptRows.map((attempt) => ({
 		id: attempt.attemptId,
 		sessionId: attempt.sessionId,
+		sessionName: attempt.sessionName,
 		completedAt: attempt.completedAt!,
 		outcome: attempt.outcome,
 		confidence: attempt.confidence,

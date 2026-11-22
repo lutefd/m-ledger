@@ -41,6 +41,7 @@ curl -sS -X POST "https://your-hostname/api/daily-plans" \
   -H "Content-Type: application/json" \
   -d '{
     "date": "2026-11-22",
+    "name": "Sliding window day",
     "items": [
       {
         "url": "https://leetcode.com/problems/two-sum/",
@@ -57,7 +58,7 @@ curl -sS -X POST "https://your-hostname/api/daily-plans" \
   }'
 ```
 
-Rules: 1–3 ordered items; problems upsert by LeetCode URL; replacing a date’s plan is allowed only before Luis starts a session from it (`409` once started).
+Rules: 1–3 ordered items; problems upsert by LeetCode URL; replacing a date’s plan is allowed only before Luis starts a session from it (`409` once started). `name` is optional (trimmed, max 80 chars, blank or `null` means unnamed). Starting the plan names the session after it.
 
 ### Read a plan
 
@@ -75,9 +76,22 @@ curl -sS "https://your-hostname/api/attempts?since=2026-11-22T00:00:00.000Z" \
   -H "Authorization: Bearer $EXPORT_API_TOKEN"
 ```
 
-Each attempt includes `slug`, `url`, `outcome`, `elapsedMs`, `confidence`, `mistakes`, `patterns`, `completedAt`, and `fromBotPlan`.
+Each attempt includes `sessionId`, `sessionName`, `slug`, `url`, `outcome`, `elapsedMs`, `confidence`, `mistakes`, `patterns`, `completedAt`, and `fromBotPlan`. `sessionName` is `null` for unnamed sessions.
 
-### Weekly export (existing)
+### Rename a session
+
+```bash
+curl -sS -X PATCH "https://your-hostname/api/sessions/$SESSION_ID" \
+  -H "Authorization: Bearer $EXPORT_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Sliding window day" }'
+```
+
+Returns `{ "session": { "id", "name" } }`. Send `"name": null` or `""` to clear the name. Unknown sessions return `404`.
+
+### Weekly export
+
+Each attempt includes `sessionName` next to `sessionId`.
 
 ```bash
 curl -sS "https://your-hostname/api/export/weekly?weekStart=2026-11-17" \

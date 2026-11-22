@@ -38,7 +38,7 @@ GITHUB_WEBHOOK_SECRET=replace-with-a-private-webhook-secret
 GITHUB_API_TOKEN=replace-with-a-read-only-github-token
 ```
 
-Startup applies pending Drizzle migrations (including `daily_plans`, `external_solves`, and `external_solve_links`). No manual SQL step is needed beyond `docker compose up -d --build`.
+Startup applies pending Drizzle migrations (including `daily_plans`, `external_solves`, `external_solve_links`, and session names). No manual SQL step is needed beyond `docker compose up -d --build`.
 
 ## Ensure The Shared Network Exists
 
