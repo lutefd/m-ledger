@@ -3,7 +3,47 @@ import { resolve } from 'node:path';
 import Database from 'better-sqlite3';
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { createGate, sessionGate } = vi.hoisted(() => ({
+	createGate: { run: null as null | (() => Promise<void>) },
+	sessionGate: { run: null as null | (() => Promise<void>) }
+}));
+
+vi.mock('../../src/lib/server/services/sessions', async (importOriginal) => {
+	const actual =
+		await importOriginal<
+			typeof import('../../src/lib/server/services/sessions')
+		>();
+	return {
+		...actual,
+		createStudySession: async (
+			...args: Parameters<typeof actual.createStudySession>
+		) => {
+			const sessionId = await actual.createStudySession(...args);
+			const run = sessionGate.run;
+			sessionGate.run = null;
+			if (run) await run();
+			return sessionId;
+		}
+	};
+});
+
+vi.mock('../../src/lib/server/services/problems', async (importOriginal) => {
+	const actual =
+		await importOriginal<
+			typeof import('../../src/lib/server/services/problems')
+		>();
+	return {
+		...actual,
+		createProblem: async (...args: Parameters<typeof actual.createProblem>) => {
+			const run = createGate.run;
+			createGate.run = null;
+			if (run) await run();
+			return actual.createProblem(...args);
+		}
+	};
+});
 import * as schema from '../../src/lib/server/db/schema';
 import type { Db } from '../../src/lib/server/db/client';
 import {
@@ -15,6 +55,8 @@ import {
 import {
 	acknowledgeBriefing,
 	activateProblem,
+	deleteStudySession,
+	getUnfinishedSession,
 	pauseSession,
 	renameStudySession,
 	saveRecap
@@ -170,6 +212,145 @@ describe('daily plans', () => {
 		);
 	});
 
+	it('keeps the started plan when a session starts during replace', async () => {
+		await upsertDailyPlan(db, 'user-1', {
+			date: '2026-11-22',
+			items: [
+				{
+					url: 'https://leetcode.com/problems/two-sum/',
+					dueReason: 'D+1',
+					source: 'bob'
+				}
+			]
+		});
+
+		createGate.run = async () => {
+			await startSessionFromDailyPlan(db, 'user-1', '2026-11-22');
+		};
+
+		await expect(
+			upsertDailyPlan(db, 'user-1', {
+				date: '2026-11-22',
+				items: [
+					{
+						url: 'https://leetcode.com/problems/valid-parentheses/',
+						dueReason: 'D+1',
+						source: 'bob'
+					}
+				]
+			})
+		).rejects.toSatisfy(
+			(error: unknown) =>
+				error instanceof DailyPlanError && error.status === 409
+		);
+
+		const plan = await getDailyPlan(db, 'user-1', '2026-11-22');
+		expect(plan?.started).toBe(true);
+		expect(plan?.items.map((item) => item.slug)).toEqual(['two-sum']);
+	});
+
+	it('does not link a session when the plan changes before the link', async () => {
+		await upsertDailyPlan(db, 'user-1', {
+			date: '2026-11-22',
+			items: [
+				{
+					url: 'https://leetcode.com/problems/two-sum/',
+					dueReason: 'D+1',
+					source: 'bob'
+				}
+			]
+		});
+
+		sessionGate.run = async () => {
+			await upsertDailyPlan(db, 'user-1', {
+				date: '2026-11-22',
+				items: [
+					{
+						url: 'https://leetcode.com/problems/valid-parentheses/',
+						dueReason: 'D+1',
+						source: 'bob'
+					}
+				]
+			});
+		};
+
+		await expect(
+			startSessionFromDailyPlan(db, 'user-1', '2026-11-22')
+		).rejects.toSatisfy(
+			(error: unknown) =>
+				error instanceof DailyPlanError &&
+				error.status === 409 &&
+				error.message.includes('changed')
+		);
+
+		const plan = await getDailyPlan(db, 'user-1', '2026-11-22');
+		expect(plan?.started).toBe(false);
+		expect(plan?.items.map((item) => item.slug)).toEqual(['valid-parentheses']);
+		expect(await getUnfinishedSession(db, 'user-1')).toBeUndefined();
+	});
+
+	it('lets Bob replace a plan after its study session is deleted', async () => {
+		await upsertDailyPlan(db, 'user-1', {
+			date: '2026-11-22',
+			items: [
+				{
+					url: 'https://leetcode.com/problems/two-sum/',
+					dueReason: 'D+1',
+					source: 'bob'
+				}
+			]
+		});
+		const sessionId = await startSessionFromDailyPlan(
+			db,
+			'user-1',
+			'2026-11-22'
+		);
+		await deleteStudySession(db, 'user-1', sessionId);
+
+		const cleared = await getDailyPlan(db, 'user-1', '2026-11-22');
+		expect(cleared?.started).toBe(false);
+		expect(cleared?.startedSessionId).toBeNull();
+
+		const replaced = await upsertDailyPlan(db, 'user-1', {
+			date: '2026-11-22',
+			items: [
+				{
+					slug: 'valid-parentheses',
+					dueReason: 'D+3',
+					source: 'bob'
+				}
+			]
+		});
+		expect(replaced?.started).toBe(false);
+		expect(replaced?.items.map((item) => item.slug)).toEqual([
+			'valid-parentheses'
+		]);
+	});
+
+	it('rejects two items that are the same LeetCode problem', async () => {
+		await expect(
+			upsertDailyPlan(db, 'user-1', {
+				date: '2026-11-22',
+				items: [
+					{
+						url: 'https://leetcode.com/problems/two-sum/',
+						dueReason: 'D+1',
+						source: 'bob'
+					},
+					{
+						slug: 'two-sum',
+						dueReason: 'D+3',
+						source: 'bob'
+					}
+				]
+			})
+		).rejects.toSatisfy(
+			(error: unknown) =>
+				error instanceof DailyPlanError && error.status === 400
+		);
+		expect(await getDailyPlan(db, 'user-1', '2026-11-22')).toBeNull();
+	});
+
 	it('returns completed attempts since a timestamp with fromBotPlan', async () => {
 		await upsertDailyPlan(db, 'user-1', {
 			date: '2026-11-22',
@@ -266,6 +447,55 @@ describe('daily plans', () => {
 		const renamed = await listCompletedAttemptsSince(db, 'user-1', since);
 		expect(renamed.attempts[0]?.sessionName).toBeNull();
 	});
+
+	it('leaves fromBotPlan false for a session no plan started', async () => {
+		db.insert(problems)
+			.values({
+				id: 'manual-problem',
+				userId: 'user-1',
+				url: 'https://leetcode.com/problems/valid-parentheses/',
+				slug: 'valid-parentheses',
+				title: 'Valid Parentheses',
+				createdAt: '2026-11-22T12:00:00.000Z',
+				updatedAt: '2026-11-22T12:00:00.000Z'
+			})
+			.run();
+		db.insert(schema.studySessions)
+			.values({
+				id: 'manual-session',
+				userId: 'user-1',
+				status: 'completed',
+				startedAt: '2026-11-22T12:00:00.000Z',
+				finishedAt: '2026-11-22T12:20:00.000Z'
+			})
+			.run();
+		db.insert(attempts)
+			.values({
+				id: 'manual-attempt',
+				userId: 'user-1',
+				sessionId: 'manual-session',
+				problemId: 'manual-problem',
+				outcome: 'partial',
+				confidence: 2,
+				createdAt: '2026-11-22T12:00:00.000Z',
+				completedAt: '2026-11-22T12:20:00.000Z'
+			})
+			.run();
+
+		const feed = await listCompletedAttemptsSince(
+			db,
+			'user-1',
+			parseAttemptsSince('2026-11-22T12:00:00.000Z')
+		);
+		expect(feed.attempts).toEqual([
+			expect.objectContaining({
+				slug: 'valid-parentheses',
+				title: 'Valid Parentheses',
+				fromBotPlan: false,
+				outcome: 'partial'
+			})
+		]);
+	});
 });
 
 describe('due date timezone', () => {
@@ -290,19 +520,42 @@ describe('due date timezone', () => {
 				finishedAt: '2026-06-01T00:30:00.000Z'
 			})
 			.run();
-		db.insert(attempts)
+		db.insert(problems)
 			.values({
-				id: 'attempt-1',
+				id: 'three-sum',
 				userId: 'user-1',
-				sessionId: 'session-1',
-				problemId: 'two-sum',
-				redoDate: '2026-06-10',
+				url: 'https://leetcode.com/problems/3sum/',
+				slug: '3sum',
+				title: '3Sum',
 				createdAt: '2026-06-01T00:00:00.000Z',
-				completedAt: '2026-06-01T00:30:00.000Z'
+				updatedAt: '2026-06-01T00:00:00.000Z'
 			})
+			.run();
+		db.insert(attempts)
+			.values([
+				{
+					id: 'attempt-due',
+					userId: 'user-1',
+					sessionId: 'session-1',
+					problemId: 'two-sum',
+					redoDate: '2026-06-10',
+					createdAt: '2026-06-01T00:00:00.000Z',
+					completedAt: '2026-06-01T00:30:00.000Z'
+				},
+				{
+					id: 'attempt-tomorrow-local',
+					userId: 'user-1',
+					sessionId: 'session-1',
+					problemId: 'three-sum',
+					redoDate: '2026-06-11',
+					createdAt: '2026-06-01T00:00:00.000Z',
+					completedAt: '2026-06-01T00:40:00.000Z'
+				}
+			])
 			.run();
 
 		// Still June 10 in America/Sao_Paulo, already June 11 in UTC.
+		// June 11 is due on the UTC calendar and not due locally yet.
 		const localEvening = new Date('2026-06-11T02:30:00.000Z');
 		const preview = await getBriefingPreview(db, 'user-1', localEvening);
 		expect(preview.redos.map((redo) => redo.dueDate)).toEqual(['2026-06-10']);

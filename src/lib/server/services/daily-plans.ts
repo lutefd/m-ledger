@@ -13,7 +13,11 @@ import {
 	type UpsertDailyPlanInput
 } from '$lib/server/validation/daily-plans';
 import { createProblem, parseLeetCodeProblemUrl } from './problems';
-import { createStudySession, getUnfinishedSession } from './sessions';
+import {
+	createStudySession,
+	deleteStudySession,
+	getUnfinishedSession
+} from './sessions';
 
 export class DailyPlanError extends Error {
 	constructor(
@@ -140,6 +144,7 @@ export async function upsertDailyPlan(
 		dueReason: string;
 		source: string;
 	}[] = [];
+	const seenUrls = new Set<string>();
 
 	for (const [index, item] of input.items.entries()) {
 		let url: string;
@@ -150,6 +155,10 @@ export async function upsertDailyPlan(
 				error instanceof Error ? error.message : 'Invalid LeetCode URL.'
 			);
 		}
+		if (seenUrls.has(url)) {
+			throw new DailyPlanError('A plan cannot list the same problem twice.');
+		}
+		seenUrls.add(url);
 		const problem = await createProblem(db, {
 			userId,
 			url,
@@ -164,10 +173,35 @@ export async function upsertDailyPlan(
 	}
 
 	const now = isoNow();
-	const planId = existing?.id ?? crypto.randomUUID();
 
 	db.transaction((tx) => {
-		if (existing) {
+		const current = tx.query.dailyPlans
+			.findFirst({
+				where: and(
+					eq(dailyPlans.userId, userId),
+					eq(dailyPlans.planDate, input.date)
+				)
+			})
+			.sync();
+		if (
+			current?.startedSessionId &&
+			tx.query.studySessions
+				.findFirst({
+					where: and(
+						eq(studySessions.id, current.startedSessionId),
+						eq(studySessions.userId, userId)
+					)
+				})
+				.sync()
+		) {
+			throw new DailyPlanError(
+				'This plan was already started and cannot be replaced.',
+				409
+			);
+		}
+
+		const planId = current?.id ?? crypto.randomUUID();
+		if (current) {
 			tx.delete(dailyPlanItems).where(eq(dailyPlanItems.planId, planId)).run();
 			tx.update(dailyPlans)
 				.set({
@@ -244,20 +278,68 @@ export async function startSessionFromDailyPlan(
 		}
 	}
 
-	const sessionId = await createStudySession(
-		db,
-		userId,
-		plan.items.map((item) => item.problemId),
-		{ reuseOpen: false, name: plan.name }
-	);
+	const problemIds = plan.items.map((item) => item.problemId);
+	const sessionId = await createStudySession(db, userId, problemIds, {
+		reuseOpen: false,
+		name: plan.name
+	});
 
-	await db
-		.update(dailyPlans)
-		.set({
-			startedSessionId: sessionId,
-			updatedAt: isoNow()
-		})
-		.where(and(eq(dailyPlans.id, plan.id), eq(dailyPlans.userId, userId)));
+	try {
+		db.transaction((tx) => {
+			const current = tx.query.dailyPlans
+				.findFirst({
+					where: and(eq(dailyPlans.id, plan.id), eq(dailyPlans.userId, userId))
+				})
+				.sync();
+			if (!current) {
+				throw new DailyPlanError('No plan found for that date.', 404);
+			}
+			if (
+				current.startedSessionId &&
+				tx.query.studySessions
+					.findFirst({
+						where: and(
+							eq(studySessions.id, current.startedSessionId),
+							eq(studySessions.userId, userId)
+						)
+					})
+					.sync()
+			) {
+				throw new DailyPlanError(
+					'This plan was already started. Open it from History or Today.',
+					409
+				);
+			}
+
+			const currentIds = tx
+				.select({ problemId: dailyPlanItems.problemId })
+				.from(dailyPlanItems)
+				.where(eq(dailyPlanItems.planId, plan.id))
+				.orderBy(asc(dailyPlanItems.position))
+				.all()
+				.map((item) => item.problemId);
+			if (
+				currentIds.length !== problemIds.length ||
+				currentIds.some((id, index) => id !== problemIds[index])
+			) {
+				throw new DailyPlanError(
+					'This plan changed. Refresh Today and start again.',
+					409
+				);
+			}
+
+			tx.update(dailyPlans)
+				.set({
+					startedSessionId: sessionId,
+					updatedAt: isoNow()
+				})
+				.where(and(eq(dailyPlans.id, plan.id), eq(dailyPlans.userId, userId)))
+				.run();
+		});
+	} catch (error) {
+		await deleteStudySession(db, userId, sessionId);
+		throw error;
+	}
 
 	return sessionId;
 }
