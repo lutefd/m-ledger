@@ -1,10 +1,10 @@
 import { error, json, type RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/server/db/client';
-import { resolveExportUserId } from '$lib/server/services/export-auth';
+import { resolveApiUserId } from '$lib/server/services/api-auth';
 import { getWeeklyExport } from '$lib/server/services/weekly-export';
 
 export const GET: RequestHandler = async ({ locals, request, url }) => {
-	const userId = await resolveExportUserId(
+	const userId = await resolveApiUserId(
 		db,
 		locals,
 		request.headers.get('authorization')

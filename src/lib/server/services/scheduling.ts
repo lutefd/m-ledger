@@ -1,4 +1,4 @@
-import { addDays, addDaysToDateOnly, dateOnly } from '$lib/utils/dates';
+import { addDaysToDateOnly, localDateOnly } from '$lib/utils/dates';
 
 const intervals: Record<number, number> = {
 	1: 1,
@@ -14,7 +14,7 @@ export function suggestRedoDate(
 ): string {
 	const days = intervals[confidence];
 	if (!days) throw new Error('Confidence must be between 1 and 5.');
-	if (typeof completedAt === 'string')
-		return addDaysToDateOnly(completedAt, days);
-	return dateOnly(addDays(completedAt, days));
+	const base =
+		typeof completedAt === 'string' ? completedAt : localDateOnly(completedAt);
+	return addDaysToDateOnly(base, days);
 }

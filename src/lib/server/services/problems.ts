@@ -42,7 +42,18 @@ export async function createProblem(
 	const existing = await db.query.problems.findFirst({
 		where: and(eq(problems.userId, input.userId), eq(problems.url, parsed.url))
 	});
-	if (existing) return existing;
+	if (existing) {
+		const nextTitle = input.title?.trim();
+		if (nextTitle && nextTitle !== existing.title) {
+			const updatedAt = isoNow();
+			await db
+				.update(problems)
+				.set({ title: nextTitle, updatedAt })
+				.where(eq(problems.id, existing.id));
+			return { ...existing, title: nextTitle, updatedAt };
+		}
+		return existing;
+	}
 
 	const now = isoNow();
 	const id = crypto.randomUUID();

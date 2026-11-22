@@ -17,7 +17,9 @@ const envSchema = z.object({
 		.string()
 		.min(16)
 		.default(nodeEnv === 'production' ? '' : 'development-setup-token'),
+	/** Shared bearer token for /api/export/*, /api/daily-plans, /api/attempts. */
 	EXPORT_API_TOKEN: z.string().min(32).optional(),
+	/** Optional owner email for bearer APIs; otherwise earliest user. */
 	EXPORT_API_USER_EMAIL: z.email().optional(),
 	NODE_ENV: z.enum(['development', 'test', 'production']).default('development')
 });

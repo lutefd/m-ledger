@@ -384,3 +384,56 @@ export const briefingRedos = sqliteTable(
 		uniqueIndex('briefing_redos_rank_unique').on(table.briefingId, table.rank)
 	]
 );
+
+/** Bot (or manual) ordered drill plan for a calendar day. Separate from study sessions. */
+export const dailyPlans = sqliteTable(
+	'daily_plans',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		planDate: text('plan_date').notNull(),
+		startedSessionId: text('started_session_id').references(
+			() => studySessions.id,
+			{ onDelete: 'set null' }
+		),
+		createdAt: iso('created_at').notNull(),
+		updatedAt: iso('updated_at').notNull()
+	},
+	(table) => [
+		uniqueIndex('daily_plans_user_date_unique').on(
+			table.userId,
+			table.planDate
+		),
+		index('daily_plans_user_date_idx').on(table.userId, table.planDate),
+		index('daily_plans_started_session_idx').on(table.startedSessionId)
+	]
+);
+
+export const dailyPlanItems = sqliteTable(
+	'daily_plan_items',
+	{
+		id: text('id').primaryKey(),
+		planId: text('plan_id')
+			.notNull()
+			.references(() => dailyPlans.id, { onDelete: 'cascade' }),
+		problemId: text('problem_id')
+			.notNull()
+			.references(() => problems.id, { onDelete: 'cascade' }),
+		position: integer('position').notNull(),
+		dueReason: text('due_reason').notNull(),
+		source: text('source').notNull()
+	},
+	(table) => [
+		uniqueIndex('daily_plan_items_position_unique').on(
+			table.planId,
+			table.position
+		),
+		uniqueIndex('daily_plan_items_problem_unique').on(
+			table.planId,
+			table.problemId
+		),
+		index('daily_plan_items_plan_idx').on(table.planId)
+	]
+);

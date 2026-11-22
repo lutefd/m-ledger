@@ -23,9 +23,13 @@ BETTER_AUTH_URL=https://your-hostname
 BETTER_AUTH_SECRET=replace-with-a-private-secret
 SETUP_TOKEN=replace-with-a-private-setup-token
 DATABASE_PATH=/data/algodrill.sqlite
+EXPORT_API_TOKEN=replace-with-openssl-rand-base64-48
+EXPORT_API_USER_EMAIL=you@example.com
 ```
 
-Keep the `LITESTREAM_*` variables if backups are enabled.
+`EXPORT_API_TOKEN` is required for Bob (and weekly export) bearer access. Keep the `LITESTREAM_*` variables if backups are enabled.
+
+Startup applies pending Drizzle migrations (including `daily_plans` / `daily_plan_items`). No manual SQL step is needed beyond `docker compose up -d --build`.
 
 ## Ensure The Shared Network Exists
 

@@ -22,25 +22,88 @@ npm run test:e2e
 npm run build
 ```
 
+## Bot / Export API
+
+AlgoDrill is single-owner. External agents (for example Bob the study coach) authenticate with the same bearer token used by the weekly export:
+
+| Variable                | Purpose                                                      |
+| ----------------------- | ------------------------------------------------------------ |
+| `EXPORT_API_TOKEN`      | Shared secret (`Authorization: Bearer …`). Min 32 chars.     |
+| `EXPORT_API_USER_EMAIL` | Optional owner email. Defaults to the earliest created user. |
+
+Calendar dates for daily plans use `TZ` (compose sets `America/Sao_Paulo`).
+
+### Push today’s plan (idempotent upsert)
+
+```bash
+curl -sS -X POST "https://your-hostname/api/daily-plans" \
+  -H "Authorization: Bearer $EXPORT_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "date": "2026-11-22",
+    "items": [
+      {
+        "url": "https://leetcode.com/problems/two-sum/",
+        "title": "Two Sum",
+        "dueReason": "D+3 shaky",
+        "source": "bob"
+      },
+      {
+        "slug": "valid-parentheses",
+        "dueReason": "D+1 help reset",
+        "source": "bob"
+      }
+    ]
+  }'
+```
+
+Rules: 1–3 ordered items; problems upsert by LeetCode URL; replacing a date’s plan is allowed only before Luis starts a session from it (`409` once started).
+
+### Read a plan
+
+```bash
+curl -sS "https://your-hostname/api/daily-plans?date=2026-11-22" \
+  -H "Authorization: Bearer $EXPORT_API_TOKEN"
+```
+
+### Incremental attempt feed
+
+`since` is exclusive (`completedAt > since`).
+
+```bash
+curl -sS "https://your-hostname/api/attempts?since=2026-11-22T00:00:00.000Z" \
+  -H "Authorization: Bearer $EXPORT_API_TOKEN"
+```
+
+Each attempt includes `slug`, `url`, `outcome`, `elapsedMs`, `confidence`, `mistakes`, `patterns`, `completedAt`, and `fromBotPlan`.
+
+### Weekly export (existing)
+
+```bash
+curl -sS "https://your-hostname/api/export/weekly?weekStart=2026-11-17" \
+  -H "Authorization: Bearer $EXPORT_API_TOKEN"
+```
+
 ## Deploy
 
 1. Copy `.env.example` to `.env` and fill every secret.
 2. Set `BETTER_AUTH_URL=https://your-hostname`.
-3. Point DNS for that hostname at the VPS.
-4. Ensure the shared Docker network exists:
+3. Set `EXPORT_API_TOKEN` (and optionally `EXPORT_API_USER_EMAIL`) if Bob or other bots will call the JSON APIs.
+4. Point DNS for that hostname at the VPS.
+5. Ensure the shared Docker network exists:
    ```bash
    docker network create caddy_net
    ```
-5. Add this block to the VPS Caddyfile:
+6. Add this block to the VPS Caddyfile:
    ```caddy
    your-hostname {
            reverse_proxy algodrill-app:3000
    }
    ```
-6. Reload Caddy on the VPS.
-7. Run `docker compose up -d --build`.
-8. Open `https://your-hostname/setup`, enter `SETUP_TOKEN`, and create the owner account.
-9. Confirm health with `curl https://your-hostname/api/health`.
+7. Reload Caddy on the VPS.
+8. Run `docker compose up -d --build` (startup runs `npm run db:migrate`).
+9. Open `https://your-hostname/setup`, enter `SETUP_TOKEN`, and create the owner account.
+10. Confirm health with `curl https://your-hostname/api/health`.
 
 The app container runs `npm run db:migrate` before `node build`, uses one replica, joins the external `caddy_net` Docker network as `algodrill-app`, and stores SQLite under the `app-data` volume mounted at `/data`.
 
