@@ -29,7 +29,7 @@ export async function createStudySession(
 	db: Db,
 	userId: string,
 	problemIds: string[],
-	options: { reuseOpen?: boolean } = {}
+	options: { reuseOpen?: boolean; name?: string | null } = {}
 ) {
 	const reuseOpen = options.reuseOpen ?? true;
 	const openSession = await getUnfinishedSession(db, userId);
@@ -54,6 +54,7 @@ export async function createStudySession(
 			.values({
 				id: sessionId,
 				userId,
+				name: options.name ?? null,
 				status: 'briefing',
 				startedAt: now
 			})
@@ -70,6 +71,22 @@ export async function createStudySession(
 	});
 	await generateBriefing(db, userId, sessionId);
 	return sessionId;
+}
+
+/** Returns false when the session does not exist for this user. */
+export async function renameStudySession(
+	db: Db,
+	userId: string,
+	sessionId: string,
+	name: string | null
+) {
+	const result = await db
+		.update(studySessions)
+		.set({ name })
+		.where(
+			and(eq(studySessions.id, sessionId), eq(studySessions.userId, userId))
+		);
+	return result.changes > 0;
 }
 
 export async function getUnfinishedSession(db: Db, userId: string) {
@@ -110,6 +127,7 @@ export async function getOpenSessionSummary(db: Db, userId: string) {
 		.where(eq(timerSegments.sessionId, session.id));
 	return {
 		id: session.id,
+		name: session.name,
 		status: session.status,
 		currentAttemptId: openSegment[0]?.attemptId ?? null,
 		currentProblemTitle: openSegment[0]?.title ?? null,
@@ -122,6 +140,7 @@ export async function listRecentSessions(db: Db, userId: string, limit = 10) {
 	const rows = await db
 		.select({
 			id: studySessions.id,
+			name: studySessions.name,
 			status: studySessions.status,
 			startedAt: studySessions.startedAt,
 			finishedAt: studySessions.finishedAt,

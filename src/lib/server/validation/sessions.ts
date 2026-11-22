@@ -1,6 +1,14 @@
 import { z } from 'zod';
 import { richTextDocumentSchema } from './rich-text';
 
+/** Optional session name: trimmed, at most 80 chars; blank means unnamed. */
+export const sessionNameSchema = z
+	.string()
+	.trim()
+	.max(80, 'Session names can be at most 80 characters.')
+	.nullish()
+	.transform((name) => name || null);
+
 export const newSessionSchema = z.object({
 	problemIds: z.array(z.string()).min(1)
 });

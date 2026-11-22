@@ -16,6 +16,7 @@ import {
 	acknowledgeBriefing,
 	activateProblem,
 	pauseSession,
+	renameStudySession,
 	saveRecap
 } from '../../src/lib/server/services/sessions';
 import {
@@ -217,6 +218,53 @@ describe('daily plans', () => {
 		const after = parseAttemptsSince(completed.completedAt!);
 		const empty = await listCompletedAttemptsSince(db, 'user-1', after);
 		expect(empty.attempts).toHaveLength(0);
+	});
+
+	it('names the session after the plan and exposes renames in the feed', async () => {
+		const plan = await upsertDailyPlan(db, 'user-1', {
+			date: '2026-11-22',
+			name: '  Sliding window day  ',
+			items: [
+				{
+					url: 'https://leetcode.com/problems/two-sum/',
+					dueReason: 'D+1',
+					source: 'bob'
+				}
+			]
+		});
+		expect(plan?.name).toBe('Sliding window day');
+
+		const sessionId = await startSessionFromDailyPlan(
+			db,
+			'user-1',
+			'2026-11-22'
+		);
+		await acknowledgeBriefing(db, 'user-1', sessionId);
+		const problem = db.select().from(problems).get()!;
+		await activateProblem(db, 'user-1', sessionId, problem.id);
+		const attempt = db.select().from(attempts).get()!;
+		await pauseSession(db, 'user-1', sessionId);
+		await saveRecap(db, 'user-1', sessionId, [
+			{
+				attemptId: attempt.id,
+				outcome: 'solved_independently',
+				confidence: 4,
+				mistakeIds: [],
+				patternIds: []
+			}
+		]);
+
+		const since = parseAttemptsSince('2020-01-01T00:00:00.000Z');
+		const feed = await listCompletedAttemptsSince(db, 'user-1', since);
+		expect(feed.attempts[0]?.sessionName).toBe('Sliding window day');
+
+		seedUser('user-2');
+		expect(await renameStudySession(db, 'user-2', sessionId, 'Not yours')).toBe(
+			false
+		);
+		expect(await renameStudySession(db, 'user-1', sessionId, null)).toBe(true);
+		const renamed = await listCompletedAttemptsSince(db, 'user-1', since);
+		expect(renamed.attempts[0]?.sessionName).toBeNull();
 	});
 });
 

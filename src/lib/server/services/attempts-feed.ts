@@ -8,6 +8,7 @@ import {
 	mistakes,
 	patterns,
 	problems,
+	studySessions,
 	timerSegments
 } from '$lib/server/db/schema';
 
@@ -41,6 +42,7 @@ export async function listCompletedAttemptsSince(
 		.select({
 			id: attempts.id,
 			sessionId: attempts.sessionId,
+			sessionName: studySessions.name,
 			outcome: attempts.outcome,
 			confidence: attempts.confidence,
 			completedAt: attempts.completedAt,
@@ -57,6 +59,7 @@ export async function listCompletedAttemptsSince(
 		})
 		.from(attempts)
 		.innerJoin(problems, eq(problems.id, attempts.problemId))
+		.innerJoin(studySessions, eq(studySessions.id, attempts.sessionId))
 		.leftJoin(timerSegments, eq(timerSegments.attemptId, attempts.id))
 		.where(
 			and(
@@ -123,6 +126,7 @@ export async function listCompletedAttemptsSince(
 		attempts: rows.map((row) => ({
 			id: row.id,
 			sessionId: row.sessionId,
+			sessionName: row.sessionName,
 			problemId: row.problemId,
 			slug: row.slug,
 			url: row.url,

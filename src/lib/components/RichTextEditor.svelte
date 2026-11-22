@@ -212,12 +212,12 @@
 
 <div class={`rich-editor rich-editor-${variant}`}>
 	{#if editable && editor}
-		<div class="flex flex-wrap gap-1 border-b border-line bg-white/80 p-2">
+		<div class="flex flex-wrap gap-0.5 border-b border-line bg-surface p-1.5">
 			{#each toolbar as item (item.label)}
 				{@const Icon = item.icon}
 				<button
 					type="button"
-					class={`rounded border border-transparent p-2 text-muted hover:border-line hover:bg-white hover:text-ink ${item.active() ? 'border-line bg-white text-ink' : ''}`}
+					class={`rounded-md p-1.5 text-muted hover:bg-hover hover:text-fg ${item.active() ? 'bg-hover text-fg' : ''}`}
 					title={item.label}
 					aria-label={item.label}
 					onclick={item.run}
@@ -227,9 +227,7 @@
 			{/each}
 		</div>
 	{/if}
-	<div
-		class={`min-h-32 bg-white ${variant === 'notebook' ? 'min-h-72' : 'min-h-32'}`}
-	>
+	<div class={`bg-surface ${variant === 'notebook' ? 'min-h-72' : 'min-h-32'}`}>
 		<div bind:this={element}></div>
 	</div>
 </div>
@@ -237,9 +235,20 @@
 <style>
 	.rich-editor {
 		overflow: hidden;
-		border: 1px solid var(--color-line);
+		border: 1px solid var(--line);
 		border-radius: 0.5rem;
-		background: white;
+		background: var(--surface);
+		color: var(--fg);
+	}
+
+	.rich-editor:focus-within {
+		border-color: var(--live);
+	}
+
+	.rich-editor :global(.ProseMirror a) {
+		color: var(--live);
+		text-decoration: underline;
+		text-underline-offset: 2px;
 	}
 
 	.rich-editor :global(.ProseMirror) {
@@ -279,13 +288,12 @@
 	.rich-editor :global(.ProseMirror pre) {
 		margin: 0.875rem 0;
 		overflow-x: auto;
+		border: 1px solid var(--line);
 		border-radius: 0.5rem;
-		background: #1f1b16;
-		color: #f8f4ec;
+		background: var(--code-bg);
+		color: var(--fg);
 		padding: 0.875rem 1rem;
-		font-family:
-			ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
-			monospace;
+		font-family: var(--font-mono);
 		font-size: 0.9rem;
 		line-height: 1.55;
 	}
@@ -298,11 +306,10 @@
 
 	.rich-editor :global(.ProseMirror code) {
 		border-radius: 0.25rem;
-		background: color-mix(in srgb, var(--color-line) 45%, white);
+		background: var(--code-bg);
+		border: 1px solid var(--line-soft);
 		padding: 0.1rem 0.3rem;
-		font-family:
-			ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
-			monospace;
+		font-family: var(--font-mono);
 		font-size: 0.9em;
 	}
 

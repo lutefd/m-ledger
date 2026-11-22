@@ -20,8 +20,10 @@ import {
 	enterSessionRecap,
 	getSessionDetail,
 	pauseSession,
+	renameStudySession,
 	updateSessionNotes
 } from '$lib/server/services/sessions';
+import { sessionNameSchema } from '$lib/server/validation/sessions';
 
 export const load: PageServerLoad = async ({ locals, params, url }) => {
 	const user = requireUser(locals);
@@ -61,6 +63,20 @@ export const actions: Actions = {
 			});
 		}
 		return { ok: true };
+	},
+	rename: async ({ request, locals, params }) => {
+		const parsed = sessionNameSchema.safeParse(
+			(await request.formData()).get('name')
+		);
+		if (!parsed.success)
+			return fail(400, { message: parsed.error.issues[0]?.message });
+		await renameStudySession(
+			db,
+			requireUser(locals).id,
+			params.id!,
+			parsed.data
+		);
+		return { ok: true, message: 'Session renamed.' };
 	},
 	notebook: async ({ request, locals, params }) => {
 		const document = String((await request.formData()).get('document') ?? '');

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { sessionNameSchema } from './sessions';
 
 const leetCodeSlug = z
 	.string()
@@ -22,8 +23,9 @@ export const upsertDailyPlanSchema = z.object({
 		.string()
 		.trim()
 		.regex(/^\d{4}-\d{2}-\d{2}$/, 'date must use YYYY-MM-DD.'),
+	name: sessionNameSchema,
 	items: z.array(dailyPlanItemInputSchema).min(1).max(3)
 });
 
-export type UpsertDailyPlanInput = z.infer<typeof upsertDailyPlanSchema>;
+export type UpsertDailyPlanInput = z.input<typeof upsertDailyPlanSchema>;
 export type DailyPlanItemInput = z.infer<typeof dailyPlanItemInputSchema>;

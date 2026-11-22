@@ -10,54 +10,83 @@
 	<title>Mistakes | AlgoDrill</title>
 </svelte:head>
 
-<main class="mx-auto grid max-w-6xl gap-8 px-6 py-8 lg:grid-cols-[380px_1fr]">
-	<section>
-		<h1 class="text-3xl font-semibold">Mistakes</h1>
-		<p class="mt-3 text-muted">
-			Capture reusable mistakes and the guardrails that prevent them.
-		</p>
-		<form
-			method="POST"
-			use:enhance={enhanceWithToast}
-			class="mt-6 space-y-4 rounded-lg border border-line bg-white/60 p-5"
-		>
-			<input
-				name="name"
-				class="w-full rounded border border-line bg-white px-3 py-2"
-				placeholder="Boundary condition"
-				required
-			/>
-			<textarea
-				name="description"
-				class="min-h-24 w-full rounded border border-line bg-white px-3 py-2"
-				placeholder="What tends to happen?"></textarea>
-			<textarea
-				name="guardrail"
-				class="min-h-24 w-full rounded border border-line bg-white px-3 py-2"
-				placeholder="What check catches it?"></textarea>
-			<button
-				class="inline-flex items-center gap-2 rounded bg-accent px-4 py-2 font-semibold text-white"
-				type="submit"
-			>
-				<Plus size={18} aria-hidden="true" />
-				Add mistake
-			</button>
-		</form>
-	</section>
-	<section class="space-y-3">
-		{#if data.mistakes.length === 0}
-			<div class="rounded-lg border border-line bg-white/55 p-6 text-muted">
-				No mistakes yet.
+<main class="page">
+	<header class="page-head">
+		<div class="min-w-0">
+			<h1 class="page-title">Mistakes</h1>
+			<p class="page-sub mt-1">
+				Capture reusable mistakes and the guardrails that prevent them.
+			</p>
+		</div>
+	</header>
+
+	<div class="grid items-start gap-8 lg:grid-cols-[296px_1fr]">
+		<section>
+			<div class="section-label">
+				<h2>Add mistake</h2>
 			</div>
-		{:else}
-			{#each data.mistakes as mistake (mistake.id)}
-				<article class="rounded-lg border border-line bg-white/60 p-5">
-					<h2 class="text-xl font-semibold">{mistake.name}</h2>
-					{#if mistake.guardrail}
-						<p class="mt-3 text-muted">{mistake.guardrail}</p>
-					{/if}
-				</article>
-			{/each}
-		{/if}
-	</section>
+			<form
+				method="POST"
+				use:enhance={enhanceWithToast}
+				class="panel space-y-3 p-4"
+			>
+				<label class="block space-y-1">
+					<span class="field-label">Name</span>
+					<input
+						name="name"
+						class="input"
+						placeholder="Boundary condition"
+						required
+					/>
+				</label>
+				<label class="block space-y-1">
+					<span class="field-label">Description</span>
+					<textarea
+						name="description"
+						rows="2"
+						class="input"
+						placeholder="What tends to happen?"></textarea>
+				</label>
+				<label class="block space-y-1">
+					<span class="field-label">Guardrail</span>
+					<textarea
+						name="guardrail"
+						rows="2"
+						class="input"
+						placeholder="What check catches it?"></textarea>
+				</label>
+				<button class="btn btn-primary w-full" type="submit">
+					<Plus size={15} aria-hidden="true" />
+					Add mistake
+				</button>
+			</form>
+		</section>
+
+		<section>
+			<div class="section-label">
+				<h2>All mistakes</h2>
+				<span class="tag">{data.mistakes.length}</span>
+			</div>
+			{#if data.mistakes.length === 0}
+				<p class="empty">No mistakes yet.</p>
+			{:else}
+				<div class="panel rows">
+					{#each data.mistakes as mistake (mistake.id)}
+						<article class="row">
+							<div class="min-w-0 flex-1">
+								<h3 class="text-sm font-medium">
+									<a class="link" href={`/mistakes/${mistake.id}`}>
+										{mistake.name}
+									</a>
+								</h3>
+								{#if mistake.guardrail}
+									<p class="mt-0.5 text-xs text-muted">{mistake.guardrail}</p>
+								{/if}
+							</div>
+						</article>
+					{/each}
+				</div>
+			{/if}
+		</section>
+	</div>
 </main>

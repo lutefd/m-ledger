@@ -1,31 +1,91 @@
 @import 'tailwindcss';
 
-@theme {
-	--font-sans:
-		Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-		'Segoe UI', sans-serif;
-	--color-paper: #f8f4ec;
-	--color-ink: #25211b;
-	--color-muted: #756d63;
-	--color-line: #ded5c6;
-	--color-accent: #2f6f68;
-	--color-accent-strong: #1f4d48;
+/*
+ * Two palettes, one system. Light is "clean slate" (monochrome, indigo for live
+ * things); dark is "night shift" (graphite, amber for live things). Components
+ * only ever use the semantic tokens below, never raw colors.
+ */
+:root {
+	color-scheme: light dark;
+	--bg: light-dark(#ffffff, #13151b);
+	--sidebar: light-dark(#fafafa, #0e1015);
+	--fg: light-dark(#0a0a0a, #e8e9ee);
+	--muted: light-dark(#6b6b6b, #8b90a0);
+	--faint: light-dark(#a3a3a3, #5d6272);
+	--line: light-dark(#e8e8e8, #262a35);
+	--line-soft: light-dark(#f1f1f1, #1f222b);
+	--surface: light-dark(#ffffff, #1a1d25);
+	--hover: light-dark(#f5f5f5, #1f222b);
+	--nav-on: light-dark(#ffffff, #1f222b);
+	--nav-ring: light-dark(#e5e5e5, transparent);
+	--live: light-dark(#4f46e5, #f5b74a);
+	--live-soft: light-dark(#f4f4ff, rgb(245 183 74 / 0.08));
+	--primary: light-dark(#0a0a0a, #f5b74a);
+	--primary-hover: light-dark(#2a2a2a, #f7c56b);
+	--primary-fg: light-dark(#ffffff, #1a1406);
+	--danger: light-dark(#dc2626, #f87171);
+	--danger-soft: light-dark(#fef2f2, rgb(248 113 113 / 0.1));
+	--code-bg: light-dark(#fafafa, #0e1015);
+}
+
+:root[data-theme='light'] {
+	color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+	color-scheme: dark;
+}
+
+@theme inline {
+	--font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+	--font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+	--color-bg: var(--bg);
+	--color-sidebar: var(--sidebar);
+	--color-fg: var(--fg);
+	--color-muted: var(--muted);
+	--color-faint: var(--faint);
+	--color-line: var(--line);
+	--color-line-soft: var(--line-soft);
+	--color-surface: var(--surface);
+	--color-hover: var(--hover);
+	--color-nav-on: var(--nav-on);
+	--color-nav-ring: var(--nav-ring);
+	--color-live: var(--live);
+	--color-live-soft: var(--live-soft);
+	--color-primary: var(--primary);
+	--color-primary-hover: var(--primary-hover);
+	--color-primary-fg: var(--primary-fg);
+	--color-danger: var(--danger);
+	--color-danger-soft: var(--danger-soft);
+}
+
+/* Sidebar collapse: explicit choice, or "auto" which collapses below 64rem. */
+@custom-variant collapsed {
+	[data-sidebar='collapsed'] & {
+		@slot;
+	}
+	@media (width < 64rem) {
+		[data-sidebar='auto'] & {
+			@slot;
+		}
+	}
 }
 
 @layer base {
-	:root {
-		color: var(--color-ink);
-		background: var(--color-paper);
+	html {
+		background: var(--bg);
+		color: var(--fg);
 		font-family: var(--font-sans);
+		-webkit-font-smoothing: antialiased;
+		font-size: 15px;
 	}
 
 	body {
 		min-height: 100vh;
 		margin: 0;
-		background:
-			linear-gradient(rgba(255, 255, 255, 0.45) 1px, transparent 1px) 0 0 / 100%
-				2rem,
-			var(--color-paper);
+		background: var(--bg);
+		line-height: 1.5;
 	}
 
 	a {
@@ -40,7 +100,98 @@
 	}
 
 	:focus-visible {
-		outline: 3px solid color-mix(in oklab, var(--color-accent) 70%, white);
+		outline: 2px solid var(--live);
 		outline-offset: 2px;
+	}
+}
+
+@layer components {
+	/* Page frame */
+	.page {
+		@apply mx-auto w-full max-w-5xl space-y-8 px-4 py-6 sm:px-8 md:py-8;
+	}
+	.page-head {
+		@apply flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5;
+	}
+	.page-title {
+		@apply text-2xl font-semibold tracking-tight md:text-[1.75rem];
+		letter-spacing: -0.03em;
+	}
+	.page-sub {
+		@apply text-sm text-muted;
+	}
+	.section-label {
+		@apply mb-2 flex items-baseline justify-between gap-3 text-[0.8rem] font-medium text-muted;
+	}
+
+	/* Bordered list container and its rows */
+	.panel {
+		@apply rounded-lg border border-line bg-surface;
+	}
+	.rows > * + * {
+		@apply border-t border-line-soft;
+	}
+	.row {
+		@apply flex items-center gap-3 px-3 py-2.5;
+	}
+	.row-live {
+		@apply bg-live-soft;
+		box-shadow: inset 2px 0 0 var(--live);
+	}
+
+	/* Buttons */
+	.btn {
+		@apply inline-flex items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-[0.8rem] font-medium whitespace-nowrap transition-colors;
+		@apply disabled:cursor-not-allowed disabled:opacity-50;
+	}
+	.btn-lg {
+		@apply px-4 py-2 text-sm;
+	}
+	.btn-primary {
+		@apply border-primary bg-primary text-primary-fg hover:border-primary-hover hover:bg-primary-hover;
+	}
+	.btn-secondary {
+		@apply border-line bg-surface text-fg hover:bg-hover;
+	}
+	.btn-ghost {
+		@apply border-transparent text-muted hover:bg-hover hover:text-fg;
+	}
+	.btn-danger {
+		@apply border-line bg-surface text-danger hover:border-danger hover:bg-danger-soft;
+	}
+	.btn-icon {
+		@apply px-1.5;
+	}
+
+	/* Forms */
+	.input {
+		@apply w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-faint;
+		@apply focus:border-live focus:outline-none;
+	}
+	.field-label {
+		@apply text-[0.8rem] font-medium;
+	}
+	.form-error {
+		@apply rounded-md border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger;
+	}
+
+	/* Small things */
+	.tag {
+		@apply font-mono text-[0.7rem] text-faint;
+	}
+	.link {
+		@apply underline decoration-line underline-offset-4 hover:decoration-fg;
+	}
+	.empty {
+		@apply text-sm text-muted;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		transition: none !important;
+		animation: none !important;
 	}
 }

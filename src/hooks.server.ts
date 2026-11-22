@@ -1,5 +1,6 @@
 import { redirect, type Handle } from '@sveltejs/kit';
 import { auth } from '$lib/server/auth';
+import { parsePreferences } from '$lib/ui/preferences';
 
 const publicPaths = [
 	'/login',
@@ -8,6 +9,7 @@ const publicPaths = [
 	'/api/export/weekly',
 	'/api/daily-plans',
 	'/api/attempts',
+	'/api/sessions',
 	'/api/integrations/github/neetcode'
 ];
 
@@ -41,5 +43,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 		throw redirect(303, '/today');
 	}
 
-	return resolve(event);
+	const { theme } = parsePreferences((name) => event.cookies.get(name));
+	return resolve(event, {
+		transformPageChunk: ({ html }) => html.replace('%algodrill.theme%', theme)
+	});
 };
