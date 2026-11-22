@@ -78,7 +78,13 @@ function stampExistingBaseline(sqlite) {
 	const insertMigration = sqlite.prepare(
 		'insert into __drizzle_migrations ("hash", "created_at") values (?, ?)'
 	);
-	for (const entry of journal.entries) {
+	const historicalBaselineTags = new Set([
+		'0000_slippery_ken_ellis',
+		'0001_spotty_vin_gonzales'
+	]);
+	for (const entry of journal.entries.filter((entry) =>
+		historicalBaselineTags.has(entry.tag)
+	)) {
 		const sql = readFileSync(`${migrationsFolder}/${entry.tag}.sql`, 'utf8');
 		const hash = createHash('sha256').update(sql).digest('hex');
 		insertMigration.run(hash, entry.when);

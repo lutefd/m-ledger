@@ -7,7 +7,8 @@ const publicPaths = [
 	'/api/health',
 	'/api/export/weekly',
 	'/api/daily-plans',
-	'/api/attempts'
+	'/api/attempts',
+	'/api/integrations/github/neetcode'
 ];
 
 export const handle: Handle = async ({ event, resolve }) => {

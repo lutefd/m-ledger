@@ -92,6 +92,11 @@ export const problems = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
+		provider: text('provider', {
+			enum: ['leetcode', 'neetcode', 'hackerrank', 'other']
+		})
+			.notNull()
+			.default('leetcode'),
 		url: text('url').notNull(),
 		slug: text('slug').notNull(),
 		title: text('title').notNull(),
@@ -103,6 +108,38 @@ export const problems = sqliteTable(
 		uniqueIndex('problems_user_url_unique').on(table.userId, table.url),
 		index('problems_user_slug_idx').on(table.userId, table.slug),
 		index('problems_user_created_idx').on(table.userId, table.createdAt)
+	]
+);
+
+export const externalSolves = sqliteTable(
+	'external_solves',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		problemId: text('problem_id')
+			.notNull()
+			.references(() => problems.id, { onDelete: 'cascade' }),
+		repository: text('repository').notNull(),
+		submissionPath: text('submission_path').notNull(),
+		submissionIndex: integer('submission_index').notNull(),
+		language: text('language').notNull(),
+		commitSha: text('commit_sha').notNull(),
+		submittedAt: iso('submitted_at').notNull(),
+		sourceCodeUrl: text('source_code_url').notNull(),
+		importedAt: iso('imported_at').notNull()
+	},
+	(table) => [
+		uniqueIndex('external_solves_repository_path_unique').on(
+			table.repository,
+			table.submissionPath
+		),
+		index('external_solves_user_submitted_idx').on(
+			table.userId,
+			table.submittedAt
+		),
+		index('external_solves_user_problem_idx').on(table.userId, table.problemId)
 	]
 );
 
@@ -318,6 +355,34 @@ export const timerSegments = sqliteTable(
 		uniqueIndex('timer_segments_one_open_per_session')
 			.on(table.sessionId)
 			.where(sql`ended_at is null`)
+	]
+);
+
+export const externalSolveLinks = sqliteTable(
+	'external_solve_links',
+	{
+		id: text('id').primaryKey(),
+		externalSolveId: text('external_solve_id')
+			.notNull()
+			.references(() => externalSolves.id, { onDelete: 'cascade' }),
+		attemptId: text('attempt_id')
+			.notNull()
+			.references(() => attempts.id, { onDelete: 'cascade' }),
+		method: text('method', { enum: ['time_window', 'manual'] }).notNull(),
+		confidence: text('confidence', {
+			enum: ['high', 'medium', 'low']
+		}).notNull(),
+		createdAt: iso('created_at').notNull()
+	},
+	(table) => [
+		uniqueIndex('external_solve_links_external_unique').on(
+			table.externalSolveId
+		),
+		uniqueIndex('external_solve_links_pair_unique').on(
+			table.externalSolveId,
+			table.attemptId
+		),
+		index('external_solve_links_attempt_idx').on(table.attemptId)
 	]
 );
 

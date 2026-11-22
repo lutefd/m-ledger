@@ -10,6 +10,7 @@
 	} from '@lucide/svelte';
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
+	import { enhanceWithToast } from '$lib/utils/forms';
 	import { formatDuration } from '$lib/utils/time';
 
 	let { data, children } = $props();
@@ -83,7 +84,7 @@
 						<form
 							method="POST"
 							action={`/sessions/${data.openSession.id}?/pause`}
-							use:enhance
+							use:enhance={enhanceWithToast}
 						>
 							<button
 								class="inline-flex items-center gap-2 rounded border border-line px-3 py-2"

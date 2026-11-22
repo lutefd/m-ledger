@@ -1,10 +1,24 @@
 import { z } from 'zod';
 
+const optionalFormString = z.preprocess(
+	(value) => (value === '' ? undefined : value),
+	z.string().optional()
+);
+
 export const problemInputSchema = z.object({
-	url: z.url('Enter a valid LeetCode URL.'),
-	title: z.string().max(180).optional(),
-	difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
-	topics: z.string().optional()
+	url: z.url('Enter a valid HTTPS problem URL.').refine((value) => {
+		try {
+			return new URL(value).protocol === 'https:';
+		} catch {
+			return false;
+		}
+	}, 'Problem URLs must use HTTPS.'),
+	title: optionalFormString.pipe(z.string().max(180).optional()),
+	difficulty: z.preprocess(
+		(value) => (value === '' ? undefined : value),
+		z.enum(['easy', 'medium', 'hard']).optional()
+	),
+	topics: optionalFormString
 });
 
 export const mistakeInputSchema = z.object({

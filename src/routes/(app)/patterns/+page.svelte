@@ -1,9 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { Plus } from '@lucide/svelte';
+	import { enhanceWithToast } from '$lib/utils/forms';
 
-	let { data, form } = $props();
+	let { data } = $props();
 </script>
+
+<svelte:head>
+	<title>Patterns | AlgoDrill</title>
+</svelte:head>
 
 <main class="mx-auto grid max-w-6xl gap-8 px-6 py-8 lg:grid-cols-[380px_1fr]">
 	<section>
@@ -13,12 +18,9 @@
 		</p>
 		<form
 			method="POST"
-			use:enhance
+			use:enhance={enhanceWithToast}
 			class="mt-6 space-y-4 rounded-lg border border-line bg-white/60 p-5"
 		>
-			{#if form?.message}
-				<p class="text-sm text-muted">{form.message}</p>
-			{/if}
 			<input
 				name="name"
 				class="w-full rounded border border-line bg-white px-3 py-2"

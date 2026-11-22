@@ -9,7 +9,9 @@ import type { Db } from '../../src/lib/server/db/client';
 import {
 	acknowledgeBriefing,
 	activateProblem,
+	createProblemAndAddToSession,
 	createStudySession,
+	getSessionDetail,
 	pauseSession,
 	saveRecap,
 	updateSessionNotes
@@ -205,6 +207,49 @@ describe('session transitions', () => {
 });
 
 describe('recap validation', () => {
+	it('preserves the session brief and recap notes after completion', async () => {
+		seedUser('user-1');
+		seedProblem('two-sum', 'user-1');
+		const sessionId = await createStudySession(db, 'user-1', ['two-sum']);
+		await acknowledgeBriefing(db, 'user-1', sessionId);
+		await updateSessionNotes(db, 'user-1', sessionId, {
+			type: 'doc',
+			content: [
+				{
+					type: 'paragraph',
+					content: [{ type: 'text', text: 'Session brief notes.' }]
+				}
+			]
+		});
+		await activateProblem(db, 'user-1', sessionId, 'two-sum');
+		const attempt = db.select().from(attempts).get()!;
+		await pauseSession(db, 'user-1', sessionId);
+
+		await saveRecap(db, 'user-1', sessionId, [
+			{
+				attemptId: attempt.id,
+				outcome: 'solved_with_help',
+				confidence: 3,
+				notesDocument: {
+					type: 'doc',
+					content: [
+						{
+							type: 'paragraph',
+							content: [{ type: 'text', text: 'Recap solution notes.' }]
+						}
+					]
+				},
+				mistakeIds: [],
+				patternIds: []
+			}
+		]);
+
+		const detail = await getSessionDetail(db, 'user-1', sessionId);
+		expect(detail?.session.status).toBe('completed');
+		expect(detail?.session.notesDocument).toContain('Session brief notes.');
+		expect(detail?.queue[0]?.notesDocument).toContain('Recap solution notes.');
+	});
+
 	it('requires a paused session before saving recap', async () => {
 		seedUser('user-1');
 		seedProblem('two-sum', 'user-1');
@@ -296,6 +341,36 @@ describe('recap validation', () => {
 });
 
 describe('catalog creation', () => {
+	it('recognizes a provider when adding a problem to an open session', async () => {
+		seedUser('user-1');
+		seedProblem('two-sum', 'user-1');
+		const sessionId = await createStudySession(db, 'user-1', ['two-sum']);
+
+		const queueItem = await createProblemAndAddToSession(
+			db,
+			'user-1',
+			sessionId,
+			'https://www.hackerrank.com/challenges/compare-the-triplets/problem'
+		);
+		const problem = db
+			.select()
+			.from(problems)
+			.where(eq(problems.id, queueItem.problemId))
+			.get();
+		const detail = await getSessionDetail(db, 'user-1', sessionId);
+
+		expect(problem).toMatchObject({
+			provider: 'hackerrank',
+			url: 'https://www.hackerrank.com/challenges/compare-the-triplets/problem'
+		});
+		expect(detail?.queue).toContainEqual(
+			expect.objectContaining({
+				problemId: queueItem.problemId,
+				provider: 'hackerrank'
+			})
+		);
+	});
+
 	it('rejects blank mistake and pattern names in service logic', async () => {
 		seedUser('user-1');
 

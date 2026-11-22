@@ -3,8 +3,9 @@
 	import RichTextEditor from '$lib/components/RichTextEditor.svelte';
 	import type { RichTextDocument } from '$lib/server/validation/rich-text';
 	import { formatDuration } from '$lib/utils/time';
+	import { enhanceWithToast } from '$lib/utils/forms';
 
-	let { data, form } = $props();
+	let { data } = $props();
 	const attempts = $derived(data.queue.filter((item) => item.attemptId));
 	let recapDocuments = $state<Record<string, RichTextDocument | null>>(
 		Object.fromEntries(
@@ -28,13 +29,18 @@
 		input.value = suggestion;
 	}
 
-	function setRecapDocument(
-		attemptId: string,
-		document: RichTextDocument | null
-	) {
-		recapDocuments = { ...recapDocuments, [attemptId]: document };
+	function setRecapDocument(attemptId: string, value: RichTextDocument | null) {
+		recapDocuments[attemptId] = value;
+		const input = document.getElementById(
+			`notesDocument:${attemptId}`
+		) as HTMLInputElement | null;
+		if (input) input.value = value ? JSON.stringify(value) : '';
 	}
 </script>
+
+<svelte:head>
+	<title>Session recap | AlgoDrill</title>
+</svelte:head>
 
 <main class="mx-auto max-w-5xl px-6 py-8">
 	<h1 class="text-3xl font-semibold">Session recap</h1>
@@ -65,7 +71,7 @@
 			<form
 				method="POST"
 				action="?/createMistake"
-				use:enhance
+				use:enhance={enhanceWithToast}
 				class="mt-4 grid gap-2 md:grid-cols-[1fr_1fr_auto]"
 			>
 				<input
@@ -89,7 +95,7 @@
 			<form
 				method="POST"
 				action="?/createPattern"
-				use:enhance
+				use:enhance={enhanceWithToast}
 				class="mt-4 grid gap-2 md:grid-cols-[1fr_1fr_auto]"
 			>
 				<input
@@ -110,14 +116,12 @@
 			</form>
 		{/if}
 	</section>
-	<form method="POST" use:enhance class="mt-6 space-y-5">
-		{#if form?.message}
-			<p
-				class="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-			>
-				{form.message}
-			</p>
-		{/if}
+	<form
+		method="POST"
+		action="?/save"
+		use:enhance={enhanceWithToast}
+		class="mt-6 space-y-5"
+	>
 		{#if attempts.length === 0}
 			<div class="rounded-lg border border-line bg-white/60 p-5 text-muted">
 				No activated attempts yet.
@@ -136,6 +140,7 @@
 						<input type="hidden" name="attemptId" value={attempt.attemptId} />
 						<input
 							type="hidden"
+							id={`notesDocument:${attemptId}`}
 							name={`notesDocument:${attemptId}`}
 							value={recapDocuments[attemptId]
 								? JSON.stringify(recapDocuments[attemptId])

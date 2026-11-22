@@ -1,6 +1,14 @@
 import { z } from 'zod';
 
 const nodeEnv = process.env.NODE_ENV ?? 'development';
+const optionalString = z.preprocess(
+	(value) => (value === '' ? undefined : value),
+	z.string().min(1).optional()
+);
+const optionalEmail = z.preprocess(
+	(value) => (value === '' ? undefined : value),
+	z.email().optional()
+);
 
 const envSchema = z.object({
 	DATABASE_PATH: z.string().min(1).default('.data/algodrill.sqlite'),
@@ -21,6 +29,10 @@ const envSchema = z.object({
 	EXPORT_API_TOKEN: z.string().min(32).optional(),
 	/** Optional owner email for bearer APIs; otherwise earliest user. */
 	EXPORT_API_USER_EMAIL: z.email().optional(),
+	NEETCODE_GITHUB_REPOSITORY: optionalString,
+	NEETCODE_IMPORT_USER_EMAIL: optionalEmail,
+	GITHUB_WEBHOOK_SECRET: optionalString,
+	GITHUB_API_TOKEN: optionalString,
 	NODE_ENV: z.enum(['development', 'test', 'production']).default('development')
 });
 

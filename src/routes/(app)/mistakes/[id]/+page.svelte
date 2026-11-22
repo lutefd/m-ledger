@@ -2,6 +2,10 @@
 	let { data } = $props();
 </script>
 
+<svelte:head>
+	<title>{data.mistake.name} | Mistakes | AlgoDrill</title>
+</svelte:head>
+
 <main class="mx-auto max-w-4xl px-6 py-8">
 	<h1 class="text-3xl font-semibold">{data.mistake.name}</h1>
 	{#if data.mistake.guardrail}<p class="mt-3 text-muted">

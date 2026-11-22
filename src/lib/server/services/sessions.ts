@@ -7,6 +7,8 @@ import {
 	briefingMistakes,
 	briefingRedos,
 	briefings,
+	externalSolves,
+	externalSolveLinks,
 	mistakes,
 	patterns,
 	problems,
@@ -18,6 +20,7 @@ import { isoNow } from '$lib/utils/dates';
 import { recapSchema, type RecapInput } from '$lib/server/validation/sessions';
 import { serializeRichTextDocument } from '$lib/server/validation/rich-text';
 import { generateBriefing, getBriefingPreview } from './briefing';
+import { reconcileExternalSolveLinksForAttempts } from './external-solve-links';
 import { createProblem } from './problems';
 
 export type RecapAttemptInput = RecapInput[number];
@@ -156,6 +159,7 @@ export async function getSessionDetail(
 			title: problems.title,
 			url: problems.url,
 			slug: problems.slug,
+			provider: problems.provider,
 			attemptId: attempts.id,
 			outcome: attempts.outcome,
 			confidence: attempts.confidence,
@@ -375,6 +379,7 @@ export async function activateProblem(
 			.where(eq(studySessions.id, sessionId))
 			.run();
 	});
+	reconcileSessionAttemptLinks(db, userId, sessionId);
 }
 
 export async function pauseSession(db: Db, userId: string, sessionId: string) {
@@ -409,6 +414,7 @@ export async function pauseSession(db: Db, userId: string, sessionId: string) {
 			.where(eq(studySessions.id, sessionId))
 			.run();
 	});
+	reconcileSessionAttemptLinks(db, userId, sessionId);
 }
 
 export async function enterSessionRecap(
@@ -447,6 +453,7 @@ export async function enterSessionRecap(
 			.where(eq(studySessions.id, sessionId))
 			.run();
 	});
+	reconcileSessionAttemptLinks(db, userId, sessionId);
 }
 
 export async function updateSessionNotes(
@@ -572,6 +579,7 @@ export async function completeSession(
 			.where(eq(studySessions.id, sessionId))
 			.run();
 	});
+	reconcileSessionAttemptLinks(db, userId, sessionId);
 }
 
 export async function saveRecap(
@@ -684,6 +692,7 @@ export async function saveRecap(
 			.where(eq(studySessions.id, sessionId))
 			.run();
 	});
+	reconcileSessionAttemptLinks(db, userId, sessionId);
 }
 
 export async function getTodaySnapshot(
@@ -720,6 +729,7 @@ export async function getProblemHistory(
 			notes: attempts.notes,
 			notesDocument: attempts.notesDocument,
 			completedAt: attempts.completedAt,
+			createdAt: attempts.createdAt,
 			sessionId: attempts.sessionId,
 			elapsedMs: sql<number>`coalesce(sum((julianday(${timerSegments.endedAt}) - julianday(${timerSegments.startedAt})) * 86400000), 0)`
 		})
@@ -741,11 +751,70 @@ export async function getProblemHistory(
 				sql`${timerSegments.endedAt} is not null`
 			)
 		);
+	const externalHistory = await db
+		.select({
+			id: externalSolves.id,
+			submissionPath: externalSolves.submissionPath,
+			submissionIndex: externalSolves.submissionIndex,
+			language: externalSolves.language,
+			commitSha: externalSolves.commitSha,
+			submittedAt: externalSolves.submittedAt,
+			sourceCodeUrl: externalSolves.sourceCodeUrl,
+			linkedAttemptId: externalSolveLinks.attemptId
+		})
+		.from(externalSolves)
+		.leftJoin(
+			externalSolveLinks,
+			eq(externalSolveLinks.externalSolveId, externalSolves.id)
+		)
+		.where(
+			and(
+				eq(externalSolves.userId, userId),
+				eq(externalSolves.problemId, problemId)
+			)
+		)
+		.orderBy(desc(externalSolves.submittedAt));
+	const relatedByAttempt = new Map<string, typeof externalHistory>();
+	for (const solve of externalHistory) {
+		if (!solve.linkedAttemptId) continue;
+		const related = relatedByAttempt.get(solve.linkedAttemptId) ?? [];
+		related.push(solve);
+		relatedByAttempt.set(solve.linkedAttemptId, related);
+	}
+	const historyWithLinks = history.map((attempt) => ({
+		...attempt,
+		relatedExternalSolves: relatedByAttempt.get(attempt.attemptId) ?? []
+	}));
+	const attemptById = new Map(
+		historyWithLinks.map((attempt) => [attempt.attemptId, attempt])
+	);
 	return {
 		problem,
-		history,
+		history: historyWithLinks,
+		externalSolves: externalHistory.map((solve) => ({
+			...solve,
+			linkedAttempt: solve.linkedAttemptId
+				? (attemptById.get(solve.linkedAttemptId) ?? null)
+				: null
+		})),
 		totalMs: Math.round(Number(totalMsRows[0]?.ms ?? 0))
 	};
+}
+
+function reconcileSessionAttemptLinks(
+	db: Db,
+	userId: string,
+	sessionId: string
+) {
+	const attemptRows = db
+		.select({ id: attempts.id })
+		.from(attempts)
+		.where(and(eq(attempts.userId, userId), eq(attempts.sessionId, sessionId)))
+		.all();
+	return reconcileExternalSolveLinksForAttempts(
+		db,
+		attemptRows.map((row) => row.id)
+	);
 }
 
 export async function getMistakeHistory(

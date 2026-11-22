@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
 export function timingSafeTokenEqual(
 	actual: string,
@@ -8,4 +8,16 @@ export function timingSafeTokenEqual(
 	const expectedBuffer = Buffer.from(expected);
 	if (actualBuffer.length !== expectedBuffer.length) return false;
 	return timingSafeEqual(actualBuffer, expectedBuffer);
+}
+
+export function verifyGitHubWebhookSignature(
+	body: string,
+	signature: string | null,
+	secret: string
+) {
+	if (!signature?.startsWith('sha256=')) return false;
+	const expected = `sha256=${createHmac('sha256', secret)
+		.update(body)
+		.digest('hex')}`;
+	return timingSafeTokenEqual(signature, expected);
 }

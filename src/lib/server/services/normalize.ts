@@ -4,7 +4,7 @@ export function normalizeName(value: string): string {
 
 export function titleFromSlug(slug: string): string {
 	return slug
-		.split('-')
+		.split(/[-_]+/)
 		.filter(Boolean)
 		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
 		.join(' ');

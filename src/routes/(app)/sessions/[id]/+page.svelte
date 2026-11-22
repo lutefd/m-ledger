@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { ExternalLink, Pause, Play, Plus, Trash2 } from '@lucide/svelte';
+	import ToastOnMount from '$lib/components/ToastOnMount.svelte';
 	import { formatDuration } from '$lib/utils/time';
+	import { enhanceWithToast } from '$lib/utils/forms';
+	import { problemProviderLabel } from '$lib/utils/providers';
 	import RichTextEditor from '$lib/components/RichTextEditor.svelte';
 	import type { RichTextDocument } from '$lib/server/validation/rich-text';
 
-	let { data, form } = $props();
+	let { data } = $props();
 	const openSegment = $derived(
 		data.segments.find((segment) => !segment.endedAt)
 	);
@@ -20,6 +23,10 @@
 	let resubmittingAfterSave = false;
 	let showMistakeForm = $state(false);
 	let showPatternForm = $state(false);
+
+	function parseDocument(value: string | null): RichTextDocument | null {
+		return value ? JSON.parse(value) : null;
+	}
 
 	$effect(() => {
 		renderedElapsed = data.elapsedMs;
@@ -124,7 +131,14 @@
 	}
 </script>
 
+<svelte:head>
+	<title>
+		{data.session.status === 'briefing' ? 'Session briefing' : 'Session'} | AlgoDrill
+	</title>
+</svelte:head>
+
 <main class="mx-auto max-w-6xl space-y-6 px-6 py-8">
+	<ToastOnMount message={data.message} />
 	<div class="flex flex-wrap items-center justify-between gap-4">
 		<div>
 			<p class="text-sm font-semibold uppercase tracking-wide text-accent">
@@ -136,14 +150,6 @@
 			{formatDuration(renderedElapsed)}
 		</div>
 	</div>
-	{#if form?.message || data.message}
-		<p
-			class={`rounded border px-3 py-2 text-sm ${form?.ok ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-700'}`}
-		>
-			{form?.message ?? data.message}
-		</p>
-	{/if}
-
 	{#if data.session.status === 'briefing'}
 		<section class="grid gap-4 lg:grid-cols-2">
 			<div class="rounded-lg border border-line bg-white/60 p-5">
@@ -178,7 +184,7 @@
 				{/if}
 			</div>
 		</section>
-		<form method="POST" action="?/acknowledge" use:enhance>
+		<form method="POST" action="?/acknowledge" use:enhance={enhanceWithToast}>
 			<button
 				class="rounded bg-accent px-4 py-2 font-semibold text-white"
 				type="submit">Acknowledge and start</button
@@ -191,7 +197,7 @@
 				<form
 					method="POST"
 					action="?/addProblem"
-					use:enhance
+					use:enhance={enhanceWithToast}
 					class="flex flex-wrap gap-2"
 				>
 					<select
@@ -201,14 +207,16 @@
 					>
 						<option value="">Existing problem</option>
 						{#each data.problems as problem (problem.id)}
-							<option value={problem.id}>{problem.title}</option>
+							<option value={problem.id}>
+								{problemProviderLabel(problem.provider)} · {problem.title}
+							</option>
 						{/each}
 					</select>
 					<input
 						name="url"
 						class="w-72 rounded border border-line bg-white px-3 py-2 text-sm"
-						placeholder="https://leetcode.com/problems/..."
-						aria-label="LeetCode URL"
+						placeholder="https://.../problem"
+						aria-label="Problem URL"
 					/>
 					<button
 						class="inline-flex items-center gap-2 rounded bg-accent px-3 py-2 text-sm font-semibold text-white"
@@ -221,10 +229,17 @@
 			<div class="mt-4 space-y-3">
 				{#each data.queue as item (item.problemId)}
 					<article
-						class="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3"
+						class="flex flex-wrap items-start justify-between gap-3 border-t border-line pt-3"
 					>
-						<div>
-							<h3 class="font-semibold">{item.title}</h3>
+						<div class="min-w-0 flex-1">
+							<div class="flex flex-wrap items-center gap-2">
+								<h3 class="font-semibold">{item.title}</h3>
+								<span
+									class="rounded-full bg-accent/10 px-2 py-1 text-xs font-semibold text-accent"
+								>
+									{problemProviderLabel(item.provider)}
+								</span>
+							</div>
 							<p class="text-sm text-muted">
 								{item.outcome ?? 'Not recapped'}
 								{#if item.attemptId}
@@ -233,6 +248,16 @@
 									)}
 								{/if}
 							</p>
+							{#if item.notesDocument}
+								<div class="mt-3 max-w-3xl">
+									<p class="mb-2 text-sm font-medium">Recap notes</p>
+									<RichTextEditor
+										document={parseDocument(item.notesDocument)}
+										editable={false}
+										variant="recap"
+									/>
+								</div>
+							{/if}
 						</div>
 						<div class="flex gap-2">
 							<a
@@ -247,7 +272,7 @@
 							<form
 								method="POST"
 								action="?/activate"
-								use:enhance
+								use:enhance={enhanceWithToast}
 								onsubmit={flushNotebookBeforeSubmit}
 							>
 								<input type="hidden" name="problemId" value={item.problemId} />
@@ -271,7 +296,7 @@
 				<form
 					method="POST"
 					action="?/pause"
-					use:enhance
+					use:enhance={enhanceWithToast}
 					onsubmit={flushNotebookBeforeSubmit}
 				>
 					<button
@@ -318,7 +343,7 @@
 				<form
 					method="POST"
 					action="?/createMistake"
-					use:enhance
+					use:enhance={enhanceWithToast}
 					class="mt-4 grid gap-2 md:grid-cols-[1fr_1fr_auto]"
 				>
 					<input
@@ -342,7 +367,7 @@
 				<form
 					method="POST"
 					action="?/createPattern"
-					use:enhance
+					use:enhance={enhanceWithToast}
 					class="mt-4 grid gap-2 md:grid-cols-[1fr_1fr_auto]"
 				>
 					<input
@@ -368,13 +393,17 @@
 	<section class="rounded-lg border border-line bg-white/60 p-5">
 		<div class="flex flex-wrap items-start justify-between gap-3">
 			<div>
-				<h2 class="text-xl font-semibold">Notebook</h2>
+				<h2 class="text-xl font-semibold">
+					{data.session.status === 'completed' ? 'Session brief' : 'Notebook'}
+				</h2>
 				<p class="mt-1 text-sm text-muted">
-					{saveState === 'saving'
-						? 'Saving'
-						: saveState === 'error'
-							? 'Could not save'
-							: 'Saved'}
+					{data.session.status === 'completed'
+						? 'Notes captured while working. This is read-only after completion.'
+						: saveState === 'saving'
+							? 'Saving'
+							: saveState === 'error'
+								? 'Could not save'
+								: 'Saved automatically'}
 				</p>
 			</div>
 			<form method="POST" action="?/delete" onsubmit={confirmDelete}>
@@ -388,11 +417,22 @@
 			</form>
 		</div>
 		<div class="mt-4">
-			<RichTextEditor
-				document={notebook}
-				variant="notebook"
-				onChange={scheduleNotebookSave}
-			/>
+			{#if data.session.status === 'completed' && !notebook}
+				<p
+					class="rounded border border-line bg-white/60 p-4 text-sm text-muted"
+				>
+					No session brief was recorded.
+				</p>
+			{:else}
+				<RichTextEditor
+					document={notebook}
+					variant="notebook"
+					editable={data.session.status !== 'completed'}
+					onChange={data.session.status === 'completed'
+						? undefined
+						: scheduleNotebookSave}
+				/>
+			{/if}
 		</div>
 	</section>
 </main>

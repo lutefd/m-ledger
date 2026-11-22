@@ -3,6 +3,7 @@ services:
     build: .
     container_name: algodrill-app
     restart: unless-stopped
+    init: true
     environment:
       NODE_ENV: production
       DATABASE_PATH: /data/algodrill.sqlite
@@ -11,22 +12,37 @@ services:
       SETUP_TOKEN: ${SETUP_TOKEN}
       EXPORT_API_TOKEN: ${EXPORT_API_TOKEN}
       EXPORT_API_USER_EMAIL: ${EXPORT_API_USER_EMAIL}
+      NEETCODE_GITHUB_REPOSITORY: ${NEETCODE_GITHUB_REPOSITORY}
+      NEETCODE_IMPORT_USER_EMAIL: ${NEETCODE_IMPORT_USER_EMAIL}
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET}
+      GITHUB_API_TOKEN: ${GITHUB_API_TOKEN}
       TZ: America/Sao_Paulo
     volumes:
       - app-data:/data
     expose:
       - '3000'
     networks:
-      caddy_net:
+      cloudflare-ingress:
         aliases:
+          - algodrill
           - algodrill-app
+      egress:
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/api/health']
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 15s
 
   litestream:
+    profiles: ['backup']
     image: litestream/litestream:0.3
     container_name: algodrill-litestream
     restart: unless-stopped
@@ -42,13 +58,16 @@ services:
     volumes:
       - app-data:/data
       - ./litestream.yml:/etc/litestream.yml:ro
-    command: ['replicate', '-config', '/etc/litestream.yml']
     networks:
-      - caddy_net
+      - egress
+    command: ['replicate', '-config', '/etc/litestream.yml']
 
 volumes:
   app-data:
 
 networks:
-  caddy_net:
+  cloudflare-ingress:
     external: true
+    name: cloudflare_ingress
+  egress:
+    name: algodrill_egress
