@@ -38,7 +38,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 };
 
 export const actions: Actions = {
-	default: async ({ request, locals, params }) => {
+	save: async ({ request, locals, params }) => {
 		const user = requireUser(locals);
 		const form = await request.formData();
 		const attemptIds = form.getAll('attemptId').map(String);

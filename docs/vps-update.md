@@ -1,6 +1,6 @@
 # VPS Update Checklist
 
-Use this when pulling a new AlgoDrill version onto a VPS that already runs a host-level Caddy instance and shared Docker network.
+Use this when pulling a new AlgoDrill version onto a VPS that already runs the shared Cloudflare Tunnel ingress network.
 
 ## Pull The Latest Code
 
@@ -19,7 +19,7 @@ SITE_HOST=...
 Set the public app origin and secrets:
 
 ```bash
-BETTER_AUTH_URL=https://your-hostname
+BETTER_AUTH_URL=https://algodrill.luisdourado.com
 BETTER_AUTH_SECRET=replace-with-a-private-secret
 SETUP_TOKEN=replace-with-a-private-setup-token
 DATABASE_PATH=/data/algodrill.sqlite
@@ -29,36 +29,40 @@ EXPORT_API_USER_EMAIL=you@example.com
 
 `EXPORT_API_TOKEN` is required for Bob (and weekly export) bearer access. Keep the `LITESTREAM_*` variables if backups are enabled.
 
-Startup applies pending Drizzle migrations (including `daily_plans` / `daily_plan_items`). No manual SQL step is needed beyond `docker compose up -d --build`.
+Optional NeetCode GitHub sync:
+
+```bash
+NEETCODE_GITHUB_REPOSITORY=lutefd/neetcode-submissions
+NEETCODE_IMPORT_USER_EMAIL=you@example.com
+GITHUB_WEBHOOK_SECRET=replace-with-a-private-webhook-secret
+GITHUB_API_TOKEN=replace-with-a-read-only-github-token
+```
+
+Startup applies pending Drizzle migrations (including `daily_plans`, `external_solves`, and `external_solve_links`). No manual SQL step is needed beyond `docker compose up -d --build`.
 
 ## Ensure The Shared Network Exists
 
 ```bash
-docker network create caddy_net
+docker network create --driver bridge --internal cloudflare_ingress
 ```
 
 If the network already exists, Docker will print an error and no change is needed.
 
-## Update Host Caddy
+Compose creates the separate `algodrill_egress` network automatically. The app needs it
+because the shared ingress network is internal and cannot reach GitHub's API.
 
-Add this block to the VPS Caddyfile:
+## Update Cloudflare Tunnel
 
-```caddy
-your-hostname {
-        reverse_proxy algodrill-app:3000
-}
-```
+Add the public hostname in the tunnel configuration:
 
-Reload Caddy:
-
-```bash
-sudo systemctl reload caddy
+```text
+algodrill.luisdourado.com -> http://algodrill:3000
 ```
 
 ## Rebuild And Start
 
 ```bash
-docker compose up -d --build
+docker compose up -d --build app
 docker compose ps
 ```
 
@@ -66,13 +70,18 @@ Expected containers:
 
 ```text
 algodrill-app
-algodrill-litestream
+```
+
+If Litestream backups are configured, start `algodrill-litestream` separately:
+
+```bash
+docker compose --profile backup up -d litestream
 ```
 
 ## Verify Health
 
 ```bash
-curl https://your-hostname/api/health
+curl https://algodrill.luisdourado.com/api/health
 ```
 
 ## Existing Database Rename

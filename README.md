@@ -87,25 +87,19 @@ curl -sS "https://your-hostname/api/export/weekly?weekStart=2026-11-17" \
 ## Deploy
 
 1. Copy `.env.example` to `.env` and fill every secret.
-2. Set `BETTER_AUTH_URL=https://your-hostname`.
+2. Set `BETTER_AUTH_URL=https://algodrill.example.com`.
 3. Set `EXPORT_API_TOKEN` (and optionally `EXPORT_API_USER_EMAIL`) if Bob or other bots will call the JSON APIs.
-4. Point DNS for that hostname at the VPS.
-5. Ensure the shared Docker network exists:
+4. Ensure the shared Cloudflare Tunnel ingress network exists:
    ```bash
-   docker network create caddy_net
+   docker network create --driver bridge --internal cloudflare_ingress
    ```
-6. Add this block to the VPS Caddyfile:
-   ```caddy
-   your-hostname {
-           reverse_proxy algodrill-app:3000
-   }
-   ```
-7. Reload Caddy on the VPS.
-8. Run `docker compose up -d --build` (startup runs `npm run db:migrate`).
-9. Open `https://your-hostname/setup`, enter `SETUP_TOKEN`, and create the owner account.
-10. Confirm health with `curl https://your-hostname/api/health`.
+5. Add the Cloudflare Tunnel public hostname `algodrill.example.com` with service
+   `http://algodrill:3000`.
+6. Run `docker compose up -d --build app` (startup runs `npm run db:migrate`).
+7. Open `https://algodrill.example.com/setup`, enter `SETUP_TOKEN`, and create the owner account.
+8. Confirm health with `curl https://algodrill.example.com/api/health`.
 
-The app container runs `npm run db:migrate` before `node build`, uses one replica, joins the external `caddy_net` Docker network as `algodrill-app`, and stores SQLite under the `app-data` volume mounted at `/data`.
+The app container runs `npm run db:migrate` before `node build`, uses one replica, joins the external `cloudflare_ingress` network as `algodrill`, joins a separate `algodrill_egress` network for GitHub API access, and stores SQLite under the `app-data` volume mounted at `/data`.
 
 ## Hosting Checklist
 
@@ -115,14 +109,17 @@ The app container runs `npm run db:migrate` before `node build`, uses one replic
   openssl rand -base64 32 # SETUP_TOKEN
   ```
 - Configure an S3-compatible bucket for Litestream before relying on the deployment.
+- Configure the personal NeetCode GitHub sync values in `.env`: repository, import
+  user email, webhook secret, and a read-only GitHub API token. Add a GitHub
+  `push` webhook for `/api/integrations/github/neetcode` with the same secret.
 - Keep exactly one `app` replica; SQLite writes are local to the mounted volume.
 - Back up `.env` somewhere private. It is ignored by Git and not baked into the image.
 - Before the first public run, verify:
   ```bash
   docker compose config
-  docker compose up -d --build
+  docker compose up -d --build app
   docker compose ps
-  curl https://your-hostname/api/health
+  curl https://algodrill.example.com/api/health
   ```
 
 ## Migrations And Rollback
@@ -131,12 +128,15 @@ Drizzle migration files live in `drizzle/`. To upgrade, deploy the new image and
 
 ## Backups
 
-Litestream replicates `/data/algodrill.sqlite` to the configured S3-compatible bucket. Do not copy the live SQLite/WAL files directly for backups.
+When the `LITESTREAM_*` values are configured, start the optional backup service with
+`docker compose --profile backup up -d litestream`. It replicates `/data/algodrill.sqlite`
+to the configured S3-compatible bucket. Do not copy the live SQLite/WAL files directly
+for backups.
 
 Verify replicas:
 
 ```bash
-docker compose exec litestream litestream snapshots -config /etc/litestream.yml /data/algodrill.sqlite
+docker compose --profile backup exec litestream litestream snapshots -config /etc/litestream.yml /data/algodrill.sqlite
 ```
 
 ## Full Restore
@@ -144,14 +144,14 @@ docker compose exec litestream litestream snapshots -config /etc/litestream.yml 
 1. Stop the app: `docker compose stop app`.
 2. Restore into an empty volume path:
    ```bash
-   docker compose run --rm litestream restore -config /etc/litestream.yml -o /data/algodrill.sqlite /data/algodrill.sqlite
+   docker compose --profile backup run --rm litestream restore -config /etc/litestream.yml -o /data/algodrill.sqlite /data/algodrill.sqlite
    ```
 3. Start the app: `docker compose up -d app`.
-4. Check `https://your-hostname/api/health` and inspect recent sessions.
+4. Check `https://algodrill.example.com/api/health` and inspect recent sessions.
 
 ## Operations Notes
 
-- Caddy terminates HTTPS and proxies to the app container.
+- Cloudflare Tunnel terminates HTTPS and proxies `algodrill.example .com` to `algodrill:3000`.
 - SQLite uses `foreign_keys=ON`, WAL mode, and a 5-second busy timeout.
 - Keep one app replica only.
 - Rotate `BETTER_AUTH_SECRET` carefully; active sessions may be invalidated.

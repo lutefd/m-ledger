@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-
-	let { form } = $props();
+	import { enhanceWithToast } from '$lib/utils/forms';
 </script>
 
 <svelte:head>
@@ -23,18 +22,9 @@
 
 	<form
 		method="POST"
-		use:enhance
+		use:enhance={enhanceWithToast}
 		class="mt-8 space-y-5 rounded-lg border border-line bg-white/60 p-6 shadow-sm"
 	>
-		{#if form?.message}
-			<p
-				class="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-				role="alert"
-			>
-				{form.message}
-			</p>
-		{/if}
-
 		<label class="block space-y-2">
 			<span class="text-sm font-medium">Email</span>
 			<input
