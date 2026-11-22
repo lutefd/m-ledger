@@ -76,7 +76,7 @@ curl -sS "https://your-hostname/api/attempts?since=2026-11-22T00:00:00.000Z" \
   -H "Authorization: Bearer $EXPORT_API_TOKEN"
 ```
 
-Each attempt includes `sessionId`, `sessionName`, `slug`, `url`, `outcome`, `elapsedMs`, `confidence`, `mistakes`, `patterns`, `completedAt`, and `fromBotPlan`. `sessionName` is `null` for unnamed sessions.
+Each attempt includes `sessionId`, `sessionName`, `slug`, `url`, `title`, `outcome`, `elapsedMs`, `confidence`, `mistakes`, `patterns`, `completedAt`, and `fromBotPlan`. `sessionName` is `null` for unnamed sessions.
 
 ### Rename a session
 
